@@ -1,0 +1,6 @@
+pandas
+click
+gensim
+tqdm
+torch
+numpy
