@@ -7,11 +7,12 @@ import gensim
 import pandas as pd
 import numpy as np
 from torch.utils.data import DataLoader
-from .vocab import VocabEntry
-from .TransactionDataset import TransactionDataset
+# from .vocab import VocabEntry
+# from .TransactionDataset import TransactionDataset
 
 
 ##UNDER CONSTRUCTION TODO: put in the right folder location, fix getFullDF so it is relevant
+
 # See below for documentation on dataloaders
 # https://pytorch.org/docs/stable/_modules/torch/utils/data/dataloader.html
 def get_full_core_df(columns_to_keep=['recipe_id','user_id','rating'], version='train_rating'):
@@ -22,7 +23,7 @@ def get_full_core_df(columns_to_keep=['recipe_id','user_id','rating'], version='
 
     folder = 'data/foodrecsysv1/'
     file = 'core-data-'+ version + '.csv'
-    df = pd.read_excel(folder + '/' + file)
+    df = pd.read_csv(folder + '/' + file)
 
     return df
 
