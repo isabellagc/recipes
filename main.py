@@ -39,7 +39,8 @@ def readFoodRecData():
     df = data_utils.get_full_core_df()
     df.head()
 
-
+#import Epicurious (tags) dataset
+recipes =pd.read_csv("../epicurious/epi_r.csv").dropna()
 
 
 
