@@ -40,7 +40,7 @@ def readFoodRecData():
     df.head()
 
 #import Epicurious (tags) dataset
-recipes =pd.read_csv("../epicurious/epi_r.csv").dropna()
+recipes =pd.read_csv("../data/epicurious/epi_r.csv").dropna()
 
 
 
