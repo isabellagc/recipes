@@ -6,3 +6,7 @@
 *.npy
 */.DS_Store
 */__pycache__
+*.xlsx
+*__pycache__
+env/
+*.zip
