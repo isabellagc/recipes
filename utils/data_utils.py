@@ -1,42 +1,36 @@
 from torch.utils.data import DataLoader
 from .ExampleDataset import ExampleDataset
 
+#delete unecessary later
+import os
+import gensim
+import pandas as pd
+import numpy as np
+from torch.utils.data import DataLoader
+from .vocab import VocabEntry
+from .TransactionDataset import TransactionDataset
+
+
 ##UNDER CONSTRUCTION TODO: put in the right folder location, fix getFullDF so it is relevant
 # See below for documentation on dataloaders
 # https://pytorch.org/docs/stable/_modules/torch/utils/data/dataloader.html
-
-def get_full_df(columns_to_keep=['Target Business Description', 'Acquirer Business Description']):
+def get_full_core_df(columns_to_keep=['recipe_id','user_id','rating'], version='train_rating'):
     """Merge dataframes, then drops buybacks, exchange offers, and recaps, and
     encodes merger/acquisition as 1 and withdrawn as 0.
     """
-    columns_to_keep = columns_to_keep + ["Encoding", "Form of the Transaction"]
+    columns_to_keep = columns_to_keep 
 
-    def encode_completed_or_withdrawn(item):
-        deal_completed = 'ithdrawn' not in item
-        if deal_completed:
-            return 1
-        return 0
+    folder = 'data/foodrecsysv1/'
+    file = 'core-data-'+ version + '.csv'
+    df = pd.read_excel(folder + '/' + file)
 
-    print("Merging Excel files...")
-    full_df = merge_dfs()
+    return df
 
     print("Encoding transactions...")
 
-    # Drop anything that doesn't have "Merger" or "Acquisition" in it
-    full_df = full_df[
-        full_df['Form of the Transaction'].str.contains("Acquisition") |
-        full_df['Form of the Transaction'].str.contains("Merger")
-    ]
 
-    # Encode any deals that have the string "ithdrawn" as 0
-    full_df['Encoding'] = full_df['Deal Status'].apply(
-        encode_completed_or_withdrawn
-    )
-
-    # Return df with columns to keep
-    return full_df[columns_to_keep]
-
-
+#BELOW HELPFUL if we have a full dataset not split.... the foodsys one is! 
+#so use later....
 def get_split_dfs(split=(0.8, 0.1, 0.1), random_seed=1337):
     """Calls `get_full_df` and then breaks it up into train/val/test splits"""
     # Enforce train/val/test or train/test splits

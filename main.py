@@ -5,6 +5,14 @@ import pandas as pd
 import random
 from tqdm import tqdm
 
+#-----brought in from example project might delete later
+from mpl_toolkits.mplot3d import Axes3D
+from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt # plotting
+import numpy as np # linear algebra
+import os # accessing directory structure
+
+
 # Custom defined
 # from models import *
 from utils import data_utils, test_utils
@@ -13,8 +21,29 @@ from utils import data_utils, test_utils
 @click.group()
 def cli():
     pass
+#hornick@augcap.org dhornick email tonight
+#This just here for ref on how to use cli.command()... run the useage line
+#and it runs the function for quick prototyping the parts
+@cli.command()
+def dummy():
+    """
+    Usage: `python main.py dummy`
+    """
+    raise NotImplementedError(
+        "dont actually run this"
+    )
+
+@cli.command()
+def readFoodRecData():
+    print("Attempting to read data from foodRecSys package...")
+    df = data_utils.get_full_core_df()
+    df.head()
 
 
+
+
+
+#IGNORE ALL BELOW UNTIL WE DECIDE WHETHER WE ARE USING THIS FRAMEWORK
 def _train(model, device, lr,
            train_dataloader, val_dataloader, test_dataloader,
            epochs, model_save_path):
