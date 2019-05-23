@@ -41,6 +41,8 @@ def readFoodRecData(version):
     print(df.head())
 
 
+#import Epicurious (tags) dataset
+recipes =pd.read_csv("../data/epicurious/epi_r.csv").dropna()
 
 
 
@@ -150,7 +152,6 @@ def readFoodRecData(version):
 #     use_cuda = torch.cuda.is_available()
 #     device = torch.device("cuda:0" if use_cuda else "cpu")
 #     raise NotImplementedError("TODO")
-
 
 if __name__ == "__main__":
     cli()
