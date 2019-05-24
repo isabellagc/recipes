@@ -70,6 +70,8 @@ def vectorize():
     # recipes['ingredients'] = recipes['ingredients'].str.replace('\d+', '')
     recipes = recipes.dropna(subset=['rating', 'ingredients'])
     recipes['ingredients'] = recipes['ingredients'].apply(removeNums)
+    #NOW CHANGE FROM VEC OF STRINGS TO ONE FAT STRING
+    recipes['ingredients'] = recipes['ingredients'].apply(lambda x : " ".join(str(word) for word in x))
     print('='*100)
     print('FIRST'*100)
     print str(recipes['ingredients'].head())
