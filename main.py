@@ -17,7 +17,19 @@ import json
 
 # Custom defined
 # from models import *
-from utils import data_utils, test_utils
+#from utils import data_utils, test_utils
+
+# New
+from gensim.models import Doc2Vec
+from sklearn import utils
+from sklearn.model_selection import train_test_split
+import gensim
+from sklearn.linear_model import LogisticRegression
+from gensim.models.doc2vec import TaggedDocument
+import re
+from bs4 import BeautifulSoup
+import nltk
+from nltk.corpus import stopwords
 
 
 @click.group()
@@ -64,19 +76,19 @@ def vectorize():
     # Not tags
     recipe_tags = recipes.drop(['title', 'calories', 'protein', 'fat', 'sodium'], axis = 1)
     mean_rating = recipes['rating'].mean()
-    #creating new column where ratings are 1 for good and 0 for bad
+    # Creating new column where ratings are 1 for good and 0 for bad
     recipes['target'] = np.where(recipes['rating']>=mean_rating, 1, 0)
 
     print("MEAN RATING: "  + str(mean_rating))
-    print str(recipes.head())
-    print "COLUMNS" + str(recipes.columns)
+    print (str(recipes.head()))
+    print ("COLUMNS" + str(recipes.columns))
 
     #FOR JOSEPH
     ingred_to_rating = pd.concat((recipes['ingredients'], recipes['rating'], recipes['target']), axis=1, keys=['ingredients', 'rating', 'target'])
     print ('=' * 100)
-    print "dataframe for joseph"
+    print ("dataframe for joseph")
     print ('=' * 100)
-    print str(ingred_to_rating.head())
+    print (str(ingred_to_rating.head()))
     print ('=' * 100)
     print ('=' * 100)
 
@@ -91,39 +103,54 @@ def vectorize():
     recipe_tags.data = recipe_tags.drop(['rating'], axis = 1)
     x_train, x_test, y_train, y_test = train_test_split(recipe_tags.data, recipe_tags.target, test_size=0.3, random_state=42)
 
-    
-
-
-
-    # Counter = Counter(split_it)
-    # most_occur = Counter.most_common(2000) # TODO: change number
-    # most_common_words = [word for word, word_count in most_occur]
-    # with open('dict.csv', 'w') as f:
-    #     for item in most_common_words:
-    #         f.write("%s\n" % (str(item)))
-
-    # #create bag-of-words style vectors for training and test sets, 
-    # with open('train_vec.csv', 'w') as f:
-    #     clean_ing = pd.read_csv('something.csv') # read in list of 
-    #     for ingredient in clean_ing['content'].tolist():
-    #         l = [];
-    #         for word in most_common_words:
-    #             if str(word) in str(cont):
-    #                 l.append(1)
-    #             else:
-    #                 l.append(0)
-    #         f.write("0")
-    #         for word in l:
-    #             f.write(",%s" % (word))
-    #         f.write("\n")
-
-
-
 
 
 #import Epicurious (tags) dataset
-recipes =pd.read_csv("data/epicurious/epi_r.csv").dropna()
+recipes = pd.read_csv("data/epicurious/epi_r.csv").dropna()
 
+# Doc2Vec implementation
+@cli.command()
+def doc2vec():
+    json_recipes = get_json_recipes()
+    recipes = pd.DataFrame.from_dict(json_recipes, orient='columns')
+    # Not tags
+    recipe_tags = recipes.drop(['title', 'calories', 'protein', 'fat', 'sodium'], axis = 1)
+    mean_rating = recipes['rating'].mean()
+    # Creating new column where ratings are 1 for good and 0 for bad
+    recipes['target'] = np.where(recipes['rating']>=mean_rating, 1, 0)
+    ingred_to_rating = pd.concat((recipes['ingredients'], recipes['rating'], recipes['target']), axis=1, keys=['ingredients', 'rating', 'target'])
+    print(ingred_to_rating.shape)
+    ingred_to_rating['ingredients'] = ingred_to_rating.ingredients.apply(lambda x: ' '.join(str(x)))
+
+
+    print(ingred_to_rating['ingredients'].apply(lambda x: len(x.split(' '))).sum())
+    print(ingred_to_rating.head())
+    ingred_to_rating['ingredients'] = ingred_to_rating['ingredients'].apply(cleanText)
+    train, test = train_test_split(ingred_to_rating, test_size=0.3, random_state=42)
+    train_tagged = train.apply(lambda r: TaggedDocument(words=tokenize_text(r['ingredients']), tags=[r.rating]), axis=1)
+    test_tagged = test.apply(lambda r: TaggedDocument(words=tokenize_text(r['ingredients']), tags=[r.rating]), axis=1)
+
+
+
+def cleanText(text):
+    text = BeautifulSoup(text, "lxml").text
+    text = re.sub(r'\|\|\|', r' ', text) 
+    text = re.sub(r'http\S+', r'<URL>', text)
+    text = text.lower()
+    text = text.replace('x', '')
+    return text
+
+
+
+
+def tokenize_text(text):
+    tokens = []
+    for sent in nltk.sent_tokenize(text):
+        for word in nltk.word_tokenize(sent):
+            if len(word) < 2:
+                continue
+            tokens.append(word.lower())
+    return tokens
 
 
 
