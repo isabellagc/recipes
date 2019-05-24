@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt # plotting
 import numpy as np # linear algebra
 import os # accessing directory structure
 
+import json
 
 # Custom defined
 # from models import *
@@ -21,7 +22,7 @@ from utils import data_utils, test_utils
 @click.group()
 def cli():
     pass
-#hornick@augcap.org dhornick email tonight
+
 #This just here for ref on how to use cli.command()... run the useage line
 #and it runs the function for quick prototyping the parts
 @cli.command()
@@ -41,8 +42,18 @@ def readFoodRecData(version):
     print(df.head())
 
 
+@cli.command()
+def get_json_recipes():
+    with open('data/epicurious/full_format_recipes.json', 'r') as f:
+        recipe_ingredients_dict = json.load(f)
+
+    for i in range(10):
+        print(recipe_ingredients_dict[i])
+
+
 #import Epicurious (tags) dataset
-recipes =pd.read_csv("../data/epicurious/epi_r.csv").dropna()
+recipes =pd.read_csv("data/epicurious/epi_r.csv").dropna()
+
 
 
 

@@ -9,6 +9,7 @@ import numpy as np
 from torch.utils.data import DataLoader
 # from .vocab import VocabEntry
 # from .TransactionDataset import TransactionDataset
+import json
 
 
 ##UNDER CONSTRUCTION TODO: put in the right folder location, fix getFullDF so it is relevant
@@ -77,3 +78,10 @@ def get_train_test_dataloaders(batch_size):
     dataloaders = (train_dataloader, val_dataloader, test_dataloader)
     datasets = (train_dataset, val_dataset, test_dataset)
     return datasets, dataloaders
+
+def get_json_recipes():
+    with open('data/full_format_recipes.json', 'r') as f:
+        recipe_ingredients_dict = json.load(f)
+
+    for i in range(10):
+        print(recipe_ingredients_dict[i])
