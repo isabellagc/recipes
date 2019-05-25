@@ -86,7 +86,7 @@ def vectorize():
     recipes['ingredients'] = recipes['ingredients'].apply(lambda x : " ".join(str(word) for word in x))
     print('='*100)
     print('FIRST'*100)
-    print str(recipes['ingredients'].head())
+    print (str(recipes['ingredients'].head()))
     print('='*100)
     # Not tags
     recipe_tags = recipes.drop(['title', 'calories', 'protein', 'fat', 'sodium'], axis = 1)
@@ -136,7 +136,7 @@ def doc2vec():
     recipes['target'] = np.where(recipes['rating']>=mean_rating, 1, 0)
     ingred_to_rating = pd.concat((recipes['ingredients'], recipes['rating'], recipes['target']), axis=1, keys=['ingredients', 'rating', 'target'])
     print(ingred_to_rating.shape)
-    ingred_to_rating['ingredients'] = ingred_to_rating.ingredients.apply(lambda x: ' '.join(str(x)))
+    #ingred_to_rating['ingredients'] = ingred_to_rating.ingredients.apply(lambda x: ' '.join(str(x)))
 
 
     print(ingred_to_rating['ingredients'].apply(lambda x: len(x.split(' '))).sum())
