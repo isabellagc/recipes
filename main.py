@@ -13,12 +13,17 @@ import numpy as np # linear algebra
 import os # accessing directory structure
 from sklearn.model_selection import train_test_split
 
+
+from sklearn.linear_model import LinearRegression
+
 import json
 import re
 
 # Custom defined
 # from models import *
 from utils import data_utils, test_utils
+
+from sklearn.feature_extraction.text import CountVectorizer
 
 
 @click.group()
@@ -76,6 +81,25 @@ def vectorize():
     print('FIRST'*100)
     print str(recipes['ingredients'].head())
     print('='*100)
+
+
+    print('='*100)
+    print('VOCAB'*20)
+    v = CountVectorizer(ngram_range=(1, 2))
+    vocab = v.fit(recipes['ingredients']).vocabulary_
+    print vocab
+    print('VOCAB'*20)
+    print('='*100)
+
+
+
+    #code to vectorize everything
+    
+
+
+
+
+
     # Not tags
     recipe_tags = recipes.drop(['title', 'calories', 'protein', 'fat', 'sodium'], axis = 1)
     mean_rating = recipes['rating'].mean()
@@ -108,10 +132,35 @@ def vectorize():
     
 
     
+@cli.command()
+def LinearRegression():
+    #import Epicurious (tags) dataset
+    recipes = pd.read_csv('data/epicurious/epi_r.csv').dropna(subset=['rating'])
+
+    # Not tags
+    recipe_tags = recipes.drop(['title'], axis = 1)
+    # Create data and target, split into train and test, I think we should sample evenly
+    recipe_tags.target = recipe_tags['rating']
+    recipe_tags.data = recipe_tags.drop(['rating'], axis = 1)
+
+    # #print(recipe_tags.target.head())
+    # print(recipe_tags.target.value_counts())
+    x_train, x_test, y_train, y_test = train_test_split(recipe_tags.data, recipe_tags.target, test_size=0.3, random_state=42)
+
+    # Run logistic regression, print results
+    lin = LinearRegression()
+    lin.fit(x_train, y_train)
+    print('multiple logistic regression:')
+    predictions = lin.predict(x_test)
+    print('Score:')
+    print(lin.score(x_test, y_test),'\n')
+    print('Confusion Matrix')
+    print(metrics.confusion_matrix(y_test, predictions))
+    print('linear coef: ' + str(lin.coef_))
+    print(lin.coef_)
 
 
-
-    # Counter = Counter(split_it)
+        # Counter = Counter(split_it)
     # most_occur = Counter.most_common(2000) # TODO: change number
     # most_common_words = [word for word, word_count in most_occur]
     # with open('dict.csv', 'w') as f:
