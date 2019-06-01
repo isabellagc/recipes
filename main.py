@@ -34,7 +34,7 @@ import re
 from bs4 import BeautifulSoup
 import nltk
 from nltk.corpus import stopwords
-
+from collections import Counter
 from sklearn.feature_extraction.text import CountVectorizer
 
 
@@ -96,13 +96,17 @@ def vectorize():
 
 
     print('='*100)
-    print('VOCAB'*20)
-    v = CountVectorizer(ngram_range=(1, 2))
-    vocab = v.fit(recipes['ingredients']).vocabulary_
-    print vocab
-    print('VOCAB'*20)
+    print('VOCAB'*5)
+    v = CountVectorizer(ngram_range=(2, 2))
+    bigrams = v.fit_transform(recipes['ingredients'])
+    vocab = v.vocabulary_
+    count_values = bigrams.toarray().sum(axis=0)
+    print('VOCAB'*5)
     print('='*100)
 
+    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True):
+        print (bg_count, bg_text)
+    
 
 
     #code to vectorize everything
@@ -121,7 +125,7 @@ def vectorize():
     print("MEAN RATING: "  + str(mean_rating))
     print (str(recipes.head()))
     print ("COLUMNS" + str(recipes.columns))
-
+'''
     #FOR JOSEPH
     ingred_to_rating = pd.concat((recipes['ingredients'], recipes['rating'], recipes['target']), axis=1, keys=['ingredients', 'rating', 'target'])
     print ('=' * 100)
@@ -132,7 +136,6 @@ def vectorize():
     print ('=' * 100)
 
 
-
     # Create data and target, split into train and test, I think we should sample evenly
     recipe_tags.target = recipe_tags['rating']
     recipe_tags.target = recipe_tags.target.round(0) #MAYBE CHANGE THIS
@@ -141,7 +144,7 @@ def vectorize():
     print(recipe_tags.target.value_counts())
     recipe_tags.data = recipe_tags.drop(['rating'], axis = 1)
     x_train, x_test, y_train, y_test = train_test_split(recipe_tags.data, recipe_tags.target, test_size=0.3, random_state=42)
-    
+'''
     
 @cli.command()
 def LinearRegression():
