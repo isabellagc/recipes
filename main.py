@@ -34,6 +34,7 @@ import re
 from bs4 import BeautifulSoup
 import nltk
 from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
 from collections import Counter
 from sklearn.feature_extraction.text import CountVectorizer
 
@@ -69,7 +70,7 @@ def get_json_recipes():
 
     for i in range(10):
         print(recipe_ingredients_dict[i]['ingredients'][0])
-        print('=' * 100)
+        print('=' * 80)
 
     return recipe_ingredients_dict
 
@@ -88,34 +89,32 @@ def vectorize():
     recipes = recipes.dropna(subset=['rating', 'ingredients'])
     recipes['ingredients'] = recipes['ingredients'].apply(removeNums)
     #NOW CHANGE FROM VEC OF STRINGS TO ONE FAT STRING
-    recipes['ingredients'] = recipes['ingredients'].apply(lambda x : " ".join(str(word) for word in x))
-    print('='*100)
-    print('FIRST'*100)
-    print (str(recipes['ingredients'].head()))
-    print('='*100)
+    ingredient_string = recipes['ingredients'].apply(lambda x : " ".join(str(word) for word in x))
 
+    print('='*80)
+    # get most common bigrams
+    # Now this also takes out stop words
+    sw = stopwords.words('english')
+    sw.append('andor')
 
-    print('='*100)
-    print('VOCAB'*5)
-    v = CountVectorizer(ngram_range=(2, 2))
-    bigrams = v.fit_transform(recipes['ingredients'])
+    v = CountVectorizer(ngram_range=(1, 2), stop_words = sw)
+    bigrams = v.fit_transform(ingredient_string)
     vocab = v.vocabulary_
     count_values = bigrams.toarray().sum(axis=0)
-    print('VOCAB'*5)
-    print('='*100)
-
+    print('='*80)
+    # print most common bigrams
+    len_two = 0
+    i = 0
     for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True):
-        print (bg_count, bg_text)
-    
+        if i < 5000:
+            print (bg_count, bg_text)
+        i += 1
+    print('\n This many words occur twice or more:')
+    print(len_two)
 
+    # Make feature vectors out of bigrams
 
-    #code to vectorize everything
-    
-
-
-
-
-
+    '''
     # Not tags
     recipe_tags = recipes.drop(['title', 'calories', 'protein', 'fat', 'sodium'], axis = 1)
     mean_rating = recipes['rating'].mean()
@@ -125,7 +124,7 @@ def vectorize():
     print("MEAN RATING: "  + str(mean_rating))
     print (str(recipes.head()))
     print ("COLUMNS" + str(recipes.columns))
-'''
+
     #FOR JOSEPH
     ingred_to_rating = pd.concat((recipes['ingredients'], recipes['rating'], recipes['target']), axis=1, keys=['ingredients', 'rating', 'target'])
     print ('=' * 100)
@@ -134,7 +133,6 @@ def vectorize():
     print (str(ingred_to_rating.head()))
     print ('=' * 100)
     print ('=' * 100)
-
 
     # Create data and target, split into train and test, I think we should sample evenly
     recipe_tags.target = recipe_tags['rating']
