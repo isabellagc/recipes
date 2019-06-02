@@ -67,11 +67,11 @@ def get_json_recipes():
     print("parsing out the recipes...")
     with open('data/epicurious/full_format_recipes.json', 'r') as f:
         recipe_ingredients_dict = json.load(f)
-
+    '''
     for i in range(10):
         print(recipe_ingredients_dict[i]['ingredients'][0])
         print('=' * 80)
-
+    '''
     return recipe_ingredients_dict
 
 
@@ -102,15 +102,32 @@ def vectorize():
     vocab = v.vocabulary_
     count_values = bigrams.toarray().sum(axis=0)
     print('='*80)
-    # print most common bigrams
-    len_two = 0
+    # Make list of 5000 most common words and bigrams
     i = 0
+    most_common_words = []
     for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True):
         if i < 5000:
             print (bg_count, bg_text)
+            most_common_words.append(bg_text)
         i += 1
-    print('\n This many words occur twice or more:')
-    print(len_two)
+    print('\n Vector of 5000 most common words and bigrams:')
+    print(len(most_common_words))
+
+    # Makes a feature vector for each list of ingredients
+    ingred_to_rating = pd.concat((recipes['ingredients'], recipes['rating']), axis=1, keys=['ingredients', 'rating'])
+
+    feature_vectors = []
+    for i, row in ingred_to_rating.iterrows():
+        feature_vec = []
+        ingred = str(row['ingredients'])
+        for word in most_common_words:
+            if word in ingred:
+                feature_vec.append(1)
+            else:
+                feature_vec.append(0)
+        feature_vectors.append(feature_vec)
+
+
 
     # Make feature vectors out of bigrams
 
