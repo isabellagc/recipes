@@ -15,8 +15,8 @@ from sklearn.ensemble import RandomForestRegressor
 
 
 import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
+#reload(sys)
+#sys.setdefaultencoding('utf-8')
 from keras.models import Sequential
 from keras.layers import Dense, Activation
 from sklearn.metrics import mean_squared_error
@@ -66,7 +66,11 @@ from nltk.tokenize import word_tokenize
 from collections import Counter
 from sklearn.feature_extraction.text import CountVectorizer
 
-
+from sklearn.svm import SVR
+from sklearn import svm
+from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import cross_val_score
+from sklearn import metrics
 
 
 @click.group()
@@ -135,7 +139,7 @@ def vectorize():
     # Make list of 5000 most common words and bigrams
     i = 0
     most_common_words = []
-    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:5000]:
+    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:100]:
         print (bg_count, bg_text)
         most_common_words.append(bg_text)
     print('\nVector of most common words and bigrams is this long: ')
@@ -156,10 +160,44 @@ def vectorize():
         feature_vectors.append(feature_vec)
 
 
-    print('=+'*80)
-    print(feature_vectors[0])
-    print(feature_vectors.shape)
-    return feature_vectors
+    print(len(feature_vectors))
+    print(recipes.shape)
+    
+    recipes['feature'] = feature_vectors
+    mean_rating = recipes['rating'].mean()
+    recipes['target'] = np.where(recipes['rating']>=mean_rating, 1, 0)
+    '''
+    print('fitting svr')
+    x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.target, test_size=0.3, random_state=42)
+    svra = SVR(gamma='scale', C=1.0, epsilon=0.2)
+    svra.fit(list(x_train1), y_train1)
+    print('svm score:')
+    print(svra.score(list(x_test1), y_test1))
+    '''
+    x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.target, test_size=0.2, random_state=42)
+    clf = svm.LinearSVC(class_weight = 'balanced', verbose = 1, max_iter = 200000)
+    print('fitting')
+    clf.fit(list(x_train1), y_train1)
+    print('predict')
+    y_pred = clf.predict(list(x_test1))
+    print(metrics.confusion_matrix(y_test1,y_pred))  
+    print(metrics.classification_report(y_test1,y_pred))  
+
+    clf = LogisticRegression(class_weight = 'balanced')
+    print('LOGIT fitting')
+    clf.fit(list(x_train1), y_train1)
+    print('LOGIT predict')
+    y_pred = clf.predict(list(x_test1))
+    print(metrics.confusion_matrix(y_test1,y_pred))  
+    print(metrics.classification_report(y_test1,y_pred))  
+
+    Cs = [0.1, 1, 10, 100]
+    gammas = [0.1, 1, 10, 100]
+    param_grid = {'C': Cs, 'gamma' : gammas}
+    grid_search = GridSearchCV(svm.SVC(kernel='linear', class_weight = 'balanced'), param_grid, verbose = 3)
+    grid_search.fit(list(x_train1), y_train1)
+    grid_search.best_params_
+    print(grid_search.best_params_)
 
 
 @cli.command()
@@ -235,8 +273,6 @@ def forest():
     # Use pandas to write the comma-separated output file
     output.to_csv( "Bag_of_Words_model.csv", index=False, quoting=3 )
 
-
-
     
 @cli.command()
 def LinearRegression():
@@ -251,7 +287,7 @@ def LinearRegression():
 
     # #print(recipe_tags.target.head())
     # print(recipe_tags.target.value_counts())
-    x_train, x_test, y_train, y_test = train_test_split(recipe_tags.data, recipe_tags.target, test_size=0.3, random_state=42)
+    x_train, x_test, y_train, y_test = train_test_split(recipe_tags.data, recipe_tags.target, test_size=0.2, random_state=42)
 
     # Run logistic regression, print results
     lin = LinearRegression()
@@ -286,15 +322,10 @@ def doc2vec():
     print(ingred_to_rating['ingredients'].apply(lambda x: len(x.split(' '))).sum())
     print(ingred_to_rating.head())
     ingred_to_rating['ingredients'] = ingred_to_rating['ingredients'].apply(cleanText)
-    train, test = train_test_split(ingred_to_rating, test_size=0.3, random_state=42)
+    train, test = train_test_split(ingred_to_rating, test_size=0.2, random_state=42)
     train_tagged = train.apply(lambda r: TaggedDocument(words=tokenize_text(r['ingredients']), tags=[r.rating]), axis=1)
     test_tagged = test.apply(lambda r: TaggedDocument(words=tokenize_text(r['ingredients']), tags=[r.rating]), axis=1)
-        # Counter = Counter(split_it)
-    # most_occur = Counter.most_common(2000) # TODO: change number
-    # most_common_words = [word for word, word_count in most_occur]
-    # with open('dict.csv', 'w') as f:
-    #     for item in most_common_words:
-    #         f.write("%s\n" % (str(item)
+
 
 
 
