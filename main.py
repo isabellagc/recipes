@@ -105,12 +105,10 @@ def vectorize():
     # Make list of 5000 most common words and bigrams
     i = 0
     most_common_words = []
-    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True):
-        if i < 5000:
-            print (bg_count, bg_text)
-            most_common_words.append(bg_text)
-        i += 1
-    print('\n Vector of 5000 most common words and bigrams:')
+    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:5000]:
+        print (bg_count, bg_text)
+        most_common_words.append(bg_text)
+    print('\nVector of most common words and bigrams is this long: ')
     print(len(most_common_words))
 
     # Makes a feature vector for each list of ingredients
@@ -126,6 +124,7 @@ def vectorize():
             else:
                 feature_vec.append(0)
         feature_vectors.append(feature_vec)
+
 
 
 
