@@ -20,7 +20,8 @@ sys.setdefaultencoding('utf-8')
 from keras.models import Sequential
 from keras.layers import Dense, Activation
 from sklearn.metrics import mean_squared_error
-
+from sklearn.ensemble import RandomForestClassifier     
+from sklearn import preprocessing
 
 ########################
 
@@ -155,39 +156,87 @@ def vectorize():
         feature_vectors.append(feature_vec)
 
 
+    print('=+'*80)
+    print(feature_vectors[0])
+    print(feature_vectors.shape)
+    return feature_vectors
 
 
-    # Make feature vectors out of bigrams
+@cli.command()
+def forest():
+    json_recipes = get_json_recipes()
+    recipes = pd.DataFrame.from_dict(json_recipes, orient='columns')
+    recipes = recipes.dropna(subset=['rating', 'ingredients'])
+    recipes['ingredients'] = recipes['ingredients'].apply(removeNums)
+    
 
-    '''
-    # Not tags
-    recipe_tags = recipes.drop(['title', 'calories', 'protein', 'fat', 'sodium'], axis = 1)
-    mean_rating = recipes['rating'].mean()
-    # Creating new column where ratings are 1 for good and 0 for bad
-    recipes['target'] = np.where(recipes['rating']>=mean_rating, 1, 0)
+    recipes.target = recipes['rating']
+    recipes.data = recipes.drop(['rating'], axis = 1)
 
-    print("MEAN RATING: "  + str(mean_rating))
-    print (str(recipes.head()))
-    print ("COLUMNS" + str(recipes.columns))
+    # #print(recipe_tags.target.head())
+    # print(recipe_tags.target.value_counts())
+    x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.3, random_state=42)
+    x_train, x_valid, y_train, y_valid = train_test_split(recipes.data, recipes.target, test_size=0.3, random_state=42)
 
-    #FOR JOSEPH
-    ingred_to_rating = pd.concat((recipes['ingredients'], recipes['rating'], recipes['target']), axis=1, keys=['ingredients', 'rating', 'target'])
-    print ('=' * 100)
-    print ("dataframe for joseph")
-    print ('=' * 100)
-    print (str(ingred_to_rating.head()))
-    print ('=' * 100)
-    print ('=' * 100)
+    #NOW CHANGE FROM VEC OF STRINGS TO ONE FAT STRING
+    ingredient_string_test = x_train['ingredients'].apply(lambda x : " ".join(str(word) for word in x))
 
-    # Create data and target, split into train and test, I think we should sample evenly
-    recipe_tags.target = recipe_tags['rating']
-    recipe_tags.target = recipe_tags.target.round(0) #MAYBE CHANGE THIS
-    recipe_tags.target = pd.to_numeric(recipe_tags.target, downcast='integer')
-    #print(recipe_tags.target.head())
-    print(recipe_tags.target.value_counts())
-    recipe_tags.data = recipe_tags.drop(['rating'], axis = 1)
-    x_train, x_test, y_train, y_test = train_test_split(recipe_tags.data, recipe_tags.target, test_size=0.3, random_state=42)
-'''
+
+
+    print('='*80)
+    # get most common bigrams
+    # Now this also takes out stop words
+    sw = stopwords.words('english')
+    sw.append('andor')
+
+    vectorizer = CountVectorizer(analyzer = "word",   \
+                             tokenizer = None,    \
+                             preprocessor = None, \
+                             stop_words = sw,   \
+                             max_features = 5000) 
+
+    train_data_features = vectorizer.fit_transform(ingredient_string_test)
+    vocab = vectorizer.vocabulary_
+    train_data_features = train_data_features.toarray()
+    count_values = train_data_features.sum(axis=0)
+    print('='*80)
+    # Make list of 5000 most common words and bigrams
+    i = 0
+    most_common_words = []
+    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:5000]:
+        print (bg_count, bg_text)
+        most_common_words.append(bg_text)
+    print('\nVector of most common words and bigrams is this long: ')
+    print(len(most_common_words))
+
+    print("DATA FEATURES SHAPE: ", train_data_features.shape)
+
+    print("Training the random forest...")
+
+    # Initialize a Random Forest classifier with 100 trees
+    forest = RandomForestRegressor(n_estimators = 100) 
+
+    # Fit the forest to the training set, using the bag of words as 
+    # features and the sentiment labels as the response variable
+    #
+    # This may take a few minutes to run
+    forest = forest.fit( train_data_features, y_train['rating'])
+
+    #clean valid dataset 
+    ingredient_string_test = x_valid['ingredients'].apply(lambda x : " ".join(str(word) for word in x))
+    valid_data_features = v.transform(ingredient_string_test)
+    valid_data_features = valid_data_features.toarray()
+    # Use the random forest to make sentiment label predictions
+    result = forest.predict(valid_data_features)
+    # Copy the results to a pandas dataframe with an "id" column and
+    # a "sentiment" column
+    output = pd.DataFrame( data={"id":test["id"], "sentiment":result} )
+
+    # Use pandas to write the comma-separated output file
+    output.to_csv( "Bag_of_Words_model.csv", index=False, quoting=3 )
+
+
+
     
 @cli.command()
 def LinearRegression():
@@ -284,9 +333,221 @@ def demo(feature_column):
   feature_layer = layers.DenseFeatures(feature_column)
   print(feature_layer(example_batch).numpy())
 
+
+
+
+@cli.command()
+def neuralnetfiltered():
+    #import Epicurious (tags) dataset
+    recipes = pd.read_csv('data/epicurious/epi_r.csv').dropna()
+    print(recipes.columns)
+
+    center = recipes[['calories', 'protein', 'fat', 'sodium']]
+    print('CENTERED'*50)
+    print(center)
+    print('MEANS'*20)
+    colmeans = center.mean(axis = 0) 
+    print(colmeans)
+    print('MEDIANS' * 20)
+    colmeadians = center.median(axis = 0)
+    print(colmeadians)
+    # mean_centered = center - colmeans
+    # mean_centered['rating'] = recipes['rating']
+    # mean_centered['rating'] = recipes['rating'].values
+
+    #take out extraneous vals
+    center['rating'] = recipes['rating']
+    center['rating'] = recipes['rating'].values
+    center_filtered = recipes[ (abs(recipes['calories'] - colmeadians['calories']) < colmeadians['calories']) & (abs(recipes['sodium'] - colmeadians['sodium']) < colmeadians['sodium'])]
+    center_filtered = center_filtered.drop(['title'], axis = 1)
+    print(center_filtered)
+
+    counter = 0
+    for index, row in center_filtered.iterrows():
+        if row['calories'] > 6350.682993:
+            print(index, row['calories'])
+            counter += 1
+    print('counter ' * 100)
+    print(counter)
+
+    center_filtered_vals = center_filtered[['calories', 'protein', 'fat', 'sodium']]
+    print('MEANS'*20)
+    colmeans_filtered = center_filtered_vals.mean(axis = 0) 
+    print(colmeans_filtered)
+    print('MEDIANS' * 20)
+    colmeadians_filtered = center_filtered_vals.median(axis = 0)
+    print(colmeadians_filtered)
+
+    mean_centered = center_filtered_vals - colmeans_filtered
+    mean_centered['rating'] = center_filtered['rating']
+    mean_centered['rating'] = center_filtered['rating'].values
+
+
+
+
+    # print('CENTERED'*50)
+    # print(center)
+    # print('CENTERED'*50)
+    # counter = 0
+    # for index, row in center.iterrows():
+    #     if row['calories'] <= 0:
+    #         print(index, row['calories'])
+    #         counter += 1
+    # print('counter ' * 100)
+    # print(counter)
+    # mean_centered = preprocessing.scale(center, with_mean='True', with_std='False')
+    # #convert back into a Pandas dataframe and add column names
+    # mean_centered_df = pd.DataFrame(mean_centered, columns=center.columns)
+    # mean_centered_df['rating'] = recipes['rating']
+    # mean_centered_df['rating'] = recipes['rating'].values
+
+    # Not tags
+    recipe_filtered= mean_centered
+    print(recipe_filtered)
+    recipe_tags = recipe_filtered.drop(['rating'], axis = 1)
+    print('TAGS ' * 50)
+    print(recipe_tags)
+    print('----'*20)
+    print('----'*20)
+    # Create data and target, split into train and test, I think we should sample evenly
+
+    recipe_filtered.target = recipe_filtered['rating']
+    recipe_filtered.data = recipe_filtered.drop(['rating'], axis = 1)
+    # recipe_filtered.data = recipe_filtered['protein']
+
+    print(recipe_filtered.target)
+
+    x_train, x_test, y_train, y_test = train_test_split(recipe_filtered.data, recipe_filtered.target, test_size=0.3, random_state=42)
+    x_train, x_valid, y_train, y_valid = train_test_split(recipe_filtered.data, recipe_filtered.target, test_size=0.3, random_state=42)
+
+
+
+
+    # # Not tags
+    # recipe_filtered= recipes.drop(['calories', 'protein', 'fat', 'sodium', 'title'], axis = 1)
+    # print(recipe_filtered)
+    # recipe_tags = recipe_filtered.drop(['rating'], axis = 1)
+    # print('TAGS ' * 50)
+    # print(recipe_tags)
+    # print('----'*20)
+    # print('----'*20)
+    # # Create data and target, split into train and test, I think we should sample evenly
+
+    # recipe_filtered.target = recipe_filtered['rating']
+    # recipe_filtered.data = recipe_filtered.drop(['rating'], axis = 1)
+    # # recipe_filtered.data = recipe_filtered['protein']
+
+    # print(recipe_filtered.target)
+
+    # x_train, x_test, y_train, y_test = train_test_split(recipe_filtered.data, recipe_filtered.target, test_size=0.3, random_state=42)
+    # x_train, x_valid, y_train, y_valid = train_test_split(recipe_filtered.data, recipe_filtered.target, test_size=0.3, random_state=42)
+
+
+
+    # random.seed(42)
+    # rf = RandomForestRegressor(n_estimators=10)
+    # rf.fit(x_train, y_train)
+    # print("fit to random forest")
+
+    # Define model
+    model = Sequential()
+    model.add(Dense(100, input_dim=4, activation= "relu"))
+    model.add(Dense(100, activation= "relu"))
+    model.add(Dense(1))
+    model.summary() #Print model Summary
+
+    # Compile model
+    model.compile(loss= "mean_squared_error" , optimizer="adam", metrics=["mean_squared_error"])
+    
+    # Fit Model
+    # model.fit(x_train, y_train, epochs=10)
+    model_output = model.fit(x_train, y_train, epochs=100, batch_size = 20, verbose=1, validation_data = (x_valid, y_valid))
+    # print("Training accuracy: " , np.mean(model_output.history['acc']))
+    # print("Validation accuracy: " , np.mean(model_output.history['val_acc']))
+
+    pred= model.predict(x_valid)
+    print(pred)
+    score = np.sqrt(mean_squared_error(y_valid,pred))
+    print ("neural network", score)
+
+
+
+    # #Prediction using Random Forest 
+    # y_valid_rf = rf.predict(x_valid)
+    # score = np.sqrt(mean_squared_error(y_valid_rf,pred))
+    # print ("random forest", score)
+
+
+
+
+
+
+
+
+
 # neuralnet implementation riperonies.
 @cli.command()
 def neuralnet():
+    #import Epicurious (tags) dataset
+    recipes = pd.read_csv('data/epicurious/epi_r.csv').dropna()
+
+    # Not tags
+    recipe_tags = recipes.drop(['title'], axis = 1)
+    # Create data and target, split into train and test, I think we should sample evenly
+    recipe_tags.target = recipe_tags['rating']
+    recipe_tags.data = recipe_tags.drop(['rating'], axis = 1)
+
+    # #print(recipe_tags.target.head())
+    # print(recipe_tags.target.value_counts())
+    x_train, x_test, y_train, y_test = train_test_split(recipe_tags.data, recipe_tags.target, test_size=0.3, random_state=42)
+    x_train, x_valid, y_train, y_valid = train_test_split(recipe_tags.data, recipe_tags.target, test_size=0.3, random_state=42)
+
+
+    print("PRINTING EXTRANEOUS VALS: ")
+    for val in y_train:
+        if val > 2:
+            print(val)
+    print("DONE PRINTING EXTRANEOUS VALS")
+
+    random.seed(42)
+    rf = RandomForestRegressor(n_estimators=10)
+    rf.fit(x_train, y_train)
+    print("fit to random forest")
+
+    print("This is y_train: ", y_train)
+    # Define model
+    model = Sequential()
+    model.add(Dense(100, input_dim=678, activation= "relu"))
+    model.add(Dense(50, activation= "relu"))
+    model.add(Dense(1))
+    model.summary() #Print model Summary
+
+    # Compile model
+    model.compile(loss= "mean_squared_error" , optimizer="adam", metrics=["mean_squared_error"])
+    
+    # Fit Model
+    model.fit(x_train, y_train, epochs=10)
+
+    pred= model.predict(x_valid)
+    print(pred)
+    # quit()
+    for index, row in pred.iterrows():
+        if abs(row[0] - y_valid.iloc[index][0]) > 5:
+            print("pred: ", pred[i], ' and y: ', y_valid[i])
+            print("diff: ", abs(pred[i] - y_valid[i]))
+
+    score = np.sqrt(mean_squared_error(y_valid,pred))
+    print ("neural network", score)
+
+
+
+    #Prediction using Random Forest 
+    y_valid_rf = rf.predict(x_valid)
+    score = np.sqrt(mean_squared_error(y_valid_rf,pred))
+    print ("random forest", score)
+
+
+
     #Importing Libraries for data preparation
 
     # #Read Necessary files
@@ -343,60 +604,6 @@ def neuralnet():
 
     # print(X_train[0])
 
-    #import Epicurious (tags) dataset
-    recipes = pd.read_csv('data/epicurious/epi_r.csv').dropna()
-
-    # Not tags
-    recipe_tags = recipes.drop(['title'], axis = 1)
-    # Create data and target, split into train and test, I think we should sample evenly
-    recipe_tags.target = recipe_tags['rating']
-    recipe_tags.data = recipe_tags.drop(['rating'], axis = 1)
-
-    # #print(recipe_tags.target.head())
-    # print(recipe_tags.target.value_counts())
-    x_train, x_test, y_train, y_test = train_test_split(recipe_tags.data, recipe_tags.target, test_size=0.3, random_state=42)
-    x_train, x_valid, y_train, y_valid = train_test_split(recipe_tags.data, recipe_tags.target, test_size=0.3, random_state=42)
-
-
-
-
-
-
-
-
-    random.seed(42)
-    rf = RandomForestRegressor(n_estimators=10)
-    rf.fit(x_train, y_train)
-    print("fit to random forest")
-
-    # Define model
-    model = Sequential()
-    model.add(Dense(100, input_dim=678, activation= "relu"))
-    model.add(Dense(50, activation= "relu"))
-    model.add(Dense(1))
-    model.summary() #Print model Summary
-
-    # Compile model
-    model.compile(loss= "mean_squared_error" , optimizer="adam", metrics=["mean_squared_error"])
-    
-    # Fit Model
-    model.fit(x_train, y_train, epochs=10)
-
-    pred= model.predict(x_valid)
-    score = np.sqrt(mean_squared_error(y_valid,pred))
-    print ("neural network", score)
-
-
-
-    #Prediction using Random Forest 
-    y_valid_rf = rf.predict(x_valid)
-    score = np.sqrt(mean_squared_error(y_valid_rf,pred))
-    print ("random forest", score)
-
-
-
-
-
 
 
 
@@ -428,45 +635,6 @@ def neuralnet():
 
     # calories = feature_column.numeric_column("calories")
     # demo(calories)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
