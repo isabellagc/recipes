@@ -164,14 +164,7 @@ def vectorize():
     recipes['feature'] = feature_vectors
     mean_rating = recipes['rating'].mean()
     recipes['target'] = np.where(recipes['rating']>=mean_rating, 1, 0)
-    '''
-    print('fitting svr')
-    x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.target, test_size=0.3, random_state=42)
-    svra = SVR(gamma='scale', C=1.0, epsilon=0.2)
-    svra.fit(list(x_train1), y_train1)
-    print('svm score:')
-    print(svra.score(list(x_test1), y_test1))
-    '''
+
     x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.target, test_size=0.2, random_state=42)
     clf = svm.LinearSVC(class_weight = 'balanced', verbose = 1, max_iter = 200000)
     print('fitting')
@@ -189,6 +182,7 @@ def vectorize():
     print(metrics.confusion_matrix(y_test1,y_pred))  
     print(metrics.classification_report(y_test1,y_pred))  
 
+    #Grid Search
     Cs = [0.1, 1, 10, 100]
     gammas = [0.1, 1, 10, 100]
     param_grid = {'C': Cs, 'gamma' : gammas}
