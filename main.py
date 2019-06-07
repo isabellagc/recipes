@@ -394,7 +394,11 @@ def finalDF(vals):
     # Make list of 5000 most common words and bigrams
     i = 0
     most_common_words = []
+<<<<<<< HEAD
     for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:vals]:
+=======
+    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:100]:
+>>>>>>> d8cd8a4cd5a6ac025fb52f32d7300c222ad22b00
         print (bg_count, bg_text)
         most_common_words.append(bg_text)
     print('\nVector of most common words and bigrams is this long: ' + str(len(most_common_words)))
@@ -453,7 +457,11 @@ def neuralnetfiltered():
     model.compile(loss= "mean_squared_error" , optimizer="adam", metrics=["mean_squared_error"])
     
     # Fit Model
+<<<<<<< HEAD
     model_output = model.fit(x_train, y_train, epochs=150, batch_size = 20, verbose=1, validation_data = (x_valid, y_valid))
+=======
+    model_output = model.fit(x_train, y_train, epochs=100, batch_size = 20, verbose=1, validation_data = (x_valid, y_valid))
+>>>>>>> d8cd8a4cd5a6ac025fb52f32d7300c222ad22b00
     #TODO: look into tthis stuff so we can use it, visualize in here 
     # print("Training accuracy: " , np.mean(model_output.history['acc']))
     # print("Validation accuracy: " , np.mean(model_output.history['val_acc']))
@@ -473,7 +481,11 @@ def neuralnetfiltered():
     y_valid_rf = rf.predict(x_valid)
     score = np.sqrt(mean_squared_error(y_valid, y_valid_rf))
     print ("random forest mean square", score)
+<<<<<<< HEAD
     score2 = r2_score(y_valid, y_valid_rf)
+=======
+    score2 = r2_score(pred, y_valid_rf)
+>>>>>>> d8cd8a4cd5a6ac025fb52f32d7300c222ad22b00
     print("random forest r2", score2)
 
 
