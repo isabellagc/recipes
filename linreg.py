@@ -41,8 +41,12 @@ import scipy
 from sklearn.svm import SVR
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GridSearchCV
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import Lasso
 from sklearn import metrics
+
+from main import get_accuracy
 
 @click.group()
 def cli():
@@ -210,17 +214,17 @@ def linreg():
         #print("The coefficient for {} is {}".format(col_name, lin.coef_[idx]))
     sorted_coef = sorted(lin.coef_, reverse = True)
     for coef in sorted_coef:
-        print("The coefficient for {} is {}".format(name_and_coef[coef],coef))
+        print ("The coefficient for {} is {}".format(name_and_coef[coef],coef))
     
-    print('multiple logistic regression:')
+    print ('Linear Regression:')
     predictions = lin.predict(x_test)
-    print('Score:')
-    print(lin.score(x_test, y_test),'\n')
+    print ('Score:')
+    print (lin.score(x_test, y_test),'\n')
 
-    print mean(y_train.values)
+    print (mean(y_train.values))
 
-    print y_test.values
-    print mean(y_test.values)
+    print (y_test.values)
+    print (mean(y_test.values))
     index = []
     for i in range(0,predictions.shape[0]):
         if abs(predictions[i]) > 100:
@@ -229,15 +233,37 @@ def linreg():
             #print("first")
     new_predictions = np.delete(predictions, index)
     new_y_test = np.delete(y_test.values, index)
-    print(len(index))
-    print(index)
-    print new_predictions
-    print mean(new_predictions)
+    print (len(index))
+    print (index)
+    print (new_predictions)
+    print (mean(new_predictions))
 
-    print "MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(new_y_test, new_predictions))
-    print "MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(new_y_test, new_predictions)))
-    print "R2 : " + str(r2_score(new_y_test, new_predictions))
+    print ("MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(new_y_test, new_predictions)))
+    print ("MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(new_y_test, new_predictions))))
+    print ("R2 : " + str(r2_score(new_y_test, new_predictions)))
+    get_accuracy(new_predictions, new_y_test)
     #diffs = pd.DataFrame({'Actual': y_test, 'Predicted': new_predictions})  
+    '''
+    lasso = Lasso(max_iter = 1000)
+    parameters = {'alpha': [0.1, 1, 10, 100]}
+    grid_search = GridSearchCV(lasso, parameters, cv=3, verbose = 100, n_jobs = 3)
+    grid_search.fit(x_train, y_train)
+    print('params')
+    print(grid_search.best_params_)
+    '''
+    '''
+    lasso = Lasso(max_iter = 100000, alpha = 10)
+    lasso.fit(x_train, y_train)
+    coeff_used = np.sum(lasso.coef_!=0)
+    print('Coefficient count: ')
+    print(len(lin.coef_))
+    print('After LASSO: ')
+    print(coeff_used)
+    print('score:')
+    print(lasso.score(x_test, y_test))
+    print()
+    '''
+
 
 
 
