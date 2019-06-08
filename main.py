@@ -403,8 +403,8 @@ def demo(feature_column):
 
 @cli.command()
 @click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
-@click.option('--tags', default=True, isFlag=True, help='whether to zip up with the tags')
-def finalDF(vals, tags):
+@click.option('--notags', default=True, is_flag=True, help='whether to zip up with the tags')
+def finalDF(vals, notags):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
 
@@ -457,12 +457,13 @@ def finalDF(vals, tags):
     print("this is the shape of the ingredient matrix: " + str(ingr.shape))
     print(ingr.head())
     
-    if tags:
-        combined_df = pd.concat([recipes, ingr], axis=1)
-        combined_df = combined_df.drop(['title'], axis = 1)
-    else:
+    if notags:
         ingr['rating'] = recipes['rating']
         combined_df = ingr
+    else:
+        combined_df = pd.concat([recipes, ingr], axis=1)
+        combined_df = combined_df.drop(['title'], axis = 1)
+        
   
     print("this is the new matrix shape: " + str(combined_df.shape))
     final = combined_df.dropna()
@@ -511,7 +512,18 @@ def neuralnetfiltered(epoch):
     score2 = r2_score(y_valid,prediction_nn)
     print("neural network r2", score2)
 
+    # Plot training & validation loss values
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.show()
 
+
+
+    print('starting the forest:')
     #random forest code
     random.seed(42)
     rf = RandomForestRegressor(n_estimators=10)
