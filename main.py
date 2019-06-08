@@ -43,6 +43,7 @@ from sklearn.model_selection import train_test_split
 
 
 from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 import json
 import re
@@ -94,6 +95,22 @@ def readFoodRecData(version):
     print("Attempting to read data from foodRecSys package...")
     df = data_utils.get_full_core_df(['recipe_id','user_id','rating'], version)
     print(df.head())
+
+# Prints accuracy metrics for a list of predictions
+# You need to give pandas dataframe columns corresponding
+# to your predictions and the actual scores
+def get_accuracy(prediction, target):
+    p = prediction
+    t = target
+    difference = p - t
+    correct = np.where(abs(difference) <= 0.75, 1, 0)
+    print(correct)
+    num_correct = correct.sum()
+    total = len(correct)
+    print('Accuracy: ')
+    print(num_correct / total)
+
+
 
 
 # @cli.command()
@@ -164,15 +181,20 @@ def vectorize():
     print(recipes.shape)
     
     recipes['feature'] = feature_vectors
-    mean_rating = recipes['rating'].mean()
-    recipes['target'] = np.where(recipes['rating']>=mean_rating, 1, 0)
     '''
-    print('fitting svr')
-    x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.target, test_size=0.3, random_state=42)
-    svra = SVR(gamma='scale', C=1.0, epsilon=0.2)
-    svra.fit(list(x_train1), y_train1)
+    x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.rating, test_size=0.2, random_state=42)
+    svra = SVR(gamma='scale', C=1.0, epsilon=0.2, verbose = 3)
+    parameters = {'kernel':('linear', 'rbf'), 'C':[.001, .1, 1, 10], 'gamma':[.001, .1, 1, 10, 'scale']}
+    print('grid search')
+    clf = GridSearchCV(svra, parameters, cv=5, verbose = 5, n_jobs = -1)
+    print('fitting SVR')
+    clf.fit(list(x_train1), y_train1)
+    y_pred = svra.predict(list(x_test1))
     print('svm score:')
-    print(svra.score(list(x_test1), y_test1))
+    get_accuracy(y_pred, y_test1)
+    print ("MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(y_test1, y_pred)))
+    print ("MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(y_test1, y_pred))))
+    '''
     '''
     x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.target, test_size=0.2, random_state=42)
     clf = svm.LinearSVC(class_weight = 'balanced', verbose = 1, max_iter = 200000)
@@ -190,7 +212,8 @@ def vectorize():
     y_pred = clf.predict(list(x_test1))
     print(metrics.confusion_matrix(y_test1,y_pred))  
     print(metrics.classification_report(y_test1,y_pred))  
-
+    
+    #Grid Search
     Cs = [0.1, 1, 10, 100]
     gammas = [0.1, 1, 10, 100]
     param_grid = {'C': Cs, 'gamma' : gammas}
@@ -198,6 +221,7 @@ def vectorize():
     grid_search.fit(list(x_train1), y_train1)
     grid_search.best_params_
     print(grid_search.best_params_)
+    '''
 
 
 @cli.command()
@@ -394,12 +418,15 @@ def finalDF(vals):
     # Make list of 5000 most common words and bigrams
     i = 0
     most_common_words = []
-    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:vals]:
+
+    print("entering most common words, going to pick the top " + str(float(vals)))
+    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:float(vals)]:
         print (bg_count, bg_text)
         most_common_words.append(bg_text)
     print('\nVector of most common words and bigrams is this long: ' + str(len(most_common_words)))
 
 
+    print("now making the feature vector per list: ")
     # Makes a feature vector for each list of ingredients
     feature_vectors = []
     for i, row in ingredients.iterrows():
@@ -411,6 +438,7 @@ def finalDF(vals):
             else:
                 feature_vec.append(0)
         feature_vectors.append(feature_vec)
+    print("done with the feature vectors ")
 
     ingr =  pd.DataFrame(feature_vectors, columns = most_common_words)
     print("this is the shape of the ingredient matrix: " + str(ingr.shape))
@@ -446,7 +474,7 @@ def neuralnetfiltered(epoch):
 
     # Define model
     model = Sequential()
-    model.add(Dense(50, input_dim=778, activation= "relu"))
+    model.add(Dense(100, input_dim=len(recipes.columns) - 1, activation= "relu"))
     model.add(Dense(50, activation= "relu"))
     model.add(Dense(1))
     model.summary() #Print model Summary
@@ -477,6 +505,8 @@ def neuralnetfiltered(epoch):
     print ("random forest mean square", score)
     score2 = r2_score(y_valid, y_valid_rf)
     print("random forest r2", score2)
+
+    print("AS A REMINDER, THIS RAN ON THE FOLLOWING DIMENSIONS: " + str(recipes.shape))
 
 
     quit()
@@ -540,7 +570,7 @@ def neuralnetfiltered(epoch):
     recipe_filtered= recipes.drop(['calories', 'protein', 'fat', 'sodium', 'title'], axis = 1)
     print(recipe_filtered)
     recipe_tags = recipe_filtered.drop(['rating'], axis = 1)
-    print('TAGS ' * 50)
+    print('TAGS ' * 20)
     print(recipe_tags)
     print('----'*20)
     print('----'*20)
