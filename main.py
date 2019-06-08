@@ -128,12 +128,24 @@ def get_json_recipes():
 
 def removeNums(x):
     # sprint x
+    # print(x)
+    # for val in x:
+    #     nums = re.search('([0-9]+[,.]?[0-9]*([\/][0-9]+[,.]?[0-9]*)*)', val)
+    #     if nums:
+    #         print('found a number, ' + str(nums.group(1)) + ' corresponding to : ' + str(val))
     result = [re.sub('[^a-zA-Z ]+', '', val) for val in x]
+    # print(type(result))
+    # print(str(result))
+    # quit()
     return result
     # print x
     # quit()
+
+
 @cli.command()
 def vectorize():
+    # removeNums(['1 1/2 fucks', '2.5 fucks', '1/3 dead', '4 cahoots'])
+    # quit()
     json_recipes = get_json_recipes()
     recipes = pd.DataFrame.from_dict(json_recipes, orient='columns')
     # recipes['ingredients'] = recipes['ingredients'].str.replace('\d+', '')
@@ -391,7 +403,8 @@ def demo(feature_column):
 
 @cli.command()
 @click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
-def finalDF(vals):
+@click.option('--tags', default=True, isFlag=True, help='whether to zip up with the tags')
+def finalDF(vals, tags):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
 
@@ -419,8 +432,8 @@ def finalDF(vals):
     i = 0
     most_common_words = []
 
-    print("entering most common words, going to pick the top " + str(float(vals)))
-    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:float(vals)]:
+    print("entering most common words, going to pick the top " + str(int(vals)))
+    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:int(vals)]:
         print (bg_count, bg_text)
         most_common_words.append(bg_text)
     print('\nVector of most common words and bigrams is this long: ' + str(len(most_common_words)))
@@ -429,7 +442,7 @@ def finalDF(vals):
     print("now making the feature vector per list: ")
     # Makes a feature vector for each list of ingredients
     feature_vectors = []
-    for i, row in ingredients.iterrows():
+    for i, row in tqdm(ingredients.iterrows()):
         feature_vec = []
         ingred = str(row['ingredients'])
         for word in most_common_words:
@@ -443,12 +456,16 @@ def finalDF(vals):
     ingr =  pd.DataFrame(feature_vectors, columns = most_common_words)
     print("this is the shape of the ingredient matrix: " + str(ingr.shape))
     print(ingr.head())
-    # ingr['rating'] = recipes['rating']
-    combined_df = pd.concat([recipes, ingr], axis=1)
+    
+    if tags:
+        combined_df = pd.concat([recipes, ingr], axis=1)
+        combined_df = combined_df.drop(['title'], axis = 1)
+    else:
+        ingr['rating'] = recipes['rating']
+        combined_df = ingr
+  
     print("this is the new matrix shape: " + str(combined_df.shape))
-    combined_df = combined_df.dropna()
-    #TODO: dropping the title until we can embed it
-    final = combined_df.drop(['title'], axis = 1)
+    final = combined_df.dropna()
     print(final.head())
     print("this is the final matrix shape without null: " + str(final.shape))
     final.to_pickle('final_dataframe.pkl')
