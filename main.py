@@ -390,7 +390,8 @@ def demo(feature_column):
 
 
 @cli.command()
-def finalDF():
+@click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
+def finalDF(vals):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
 
@@ -417,7 +418,7 @@ def finalDF():
     # Make list of 5000 most common words and bigrams
     i = 0
     most_common_words = []
-    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:100]:
+    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:vals]:
         print (bg_count, bg_text)
         most_common_words.append(bg_text)
     print('\nVector of most common words and bigrams is this long: ' + str(len(most_common_words)))
@@ -451,8 +452,10 @@ def finalDF():
 
 
 @cli.command()
-def neuralnetfiltered():
+@click.option('--epoch', default=100)
+def neuralnetfiltered(epoch):
     recipes = pd.read_pickle('final_dataframe.pkl')
+    print("CURRENT DIMENSIONS WE ARE WORKING WITH: " + str(recipes.shape))
     #######################
 
 
@@ -476,7 +479,7 @@ def neuralnetfiltered():
     model.compile(loss= "mean_squared_error" , optimizer="adam", metrics=["mean_squared_error"])
     
     # Fit Model
-    model_output = model.fit(x_train, y_train, epochs=100, batch_size = 20, verbose=1, validation_data = (x_valid, y_valid))
+    model_output = model.fit(x_train, y_train, epochs=epoch, batch_size = 20, verbose=1, validation_data = (x_valid, y_valid))
     #TODO: look into tthis stuff so we can use it, visualize in here 
     # print("Training accuracy: " , np.mean(model_output.history['acc']))
     # print("Validation accuracy: " , np.mean(model_output.history['val_acc']))
@@ -496,7 +499,7 @@ def neuralnetfiltered():
     y_valid_rf = rf.predict(x_valid)
     score = np.sqrt(mean_squared_error(y_valid, y_valid_rf))
     print ("random forest mean square", score)
-    score2 = r2_score(pred, y_valid_rf)
+    score2 = r2_score(y_valid, y_valid_rf)
     print("random forest r2", score2)
 
 
@@ -611,11 +614,6 @@ def neuralnetfiltered():
     print ("random forest mean square", score)
     score2 = r2_score(y_valid, y_valid_rf)
     print("random forest r2", score2)
-
-
-
-
-
 
 
 
