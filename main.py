@@ -181,7 +181,7 @@ def vectorize():
     print(recipes.shape)
     
     recipes['feature'] = feature_vectors
-
+    '''
     x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.rating, test_size=0.2, random_state=42)
     svra = SVR(gamma='scale', C=1.0, epsilon=0.2, verbose = 3)
     parameters = {'kernel':('linear', 'rbf'), 'C':[.001, .1, 1, 10], 'gamma':[.001, .1, 1, 10, 'scale']}
@@ -194,6 +194,7 @@ def vectorize():
     get_accuracy(y_pred, y_test1)
     print ("MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(y_test1, y_pred)))
     print ("MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(y_test1, y_pred))))
+    '''
     '''
     x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.target, test_size=0.2, random_state=42)
     clf = svm.LinearSVC(class_weight = 'balanced', verbose = 1, max_iter = 200000)
