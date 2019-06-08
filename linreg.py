@@ -193,7 +193,7 @@ def linreg():
     # Create data and target, split into train and test, I think we should sample evenly
     recipes.target = recipes['rating']
     #recipe_tags.data = recipe_tags.drop(['rating'], axis = 1)
-    recipes.data = recipes.drop(['rating', 'calories', 'protein', 'fat', 'sodium'], axis = 1)
+    recipes.data = recipes.drop(['rating'], axis = 1)
     #print recipe_tags.data
     # quit()
 
@@ -204,6 +204,14 @@ def linreg():
     # Run logistic regression, print results
     lin = LinearRegression()
     lin.fit(x_train, y_train)
+    name_and_coef = {}
+    for idx, col_name in enumerate(x_train.columns):
+        name_and_coef[lin.coef_[idx]] = col_name
+        #print("The coefficient for {} is {}".format(col_name, lin.coef_[idx]))
+    sorted_coef = sorted(lin.coef_, reverse = True)
+    for coef in sorted_coef:
+        print("The coefficient for {} is {}".format(name_and_coef[coef],coef))
+    
     print('multiple logistic regression:')
     predictions = lin.predict(x_test)
     print('Score:')
