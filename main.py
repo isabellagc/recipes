@@ -377,18 +377,18 @@ def demo(feature_column):
 
 @cli.command()
 @click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
-@click.option('--tags', default = 100, help='how many of top tags to include')
+@click.option('--tagnum', default = 675, help='how many of top tags to include')
 @click.option('--notags', default=False, is_flag=True, help='whether to zip up with the tags')
-def finalDF(vals, tags, notags):
+def finalDF(vals, tagnum, notags):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
 
 
 
     recipes = recipes.drop(axis=1, columns=['title'])
-    tags = recipes.drop(axis=1, columns=['calories','sodium','fat','protein','rating'])
+    just_tags = recipes.drop(axis=1, columns=['calories','sodium','fat','protein','rating'])
     ##GET THE MOST COMMON TAGS DELETE THE ONES THAT ARE SHITE
-    summies = tags.sum(axis = 0, skipna = True) 
+    summies = just_tags.sum(axis = 0, skipna = True) 
     summies.sort_values(ascending=False, inplace=True)
 
     
@@ -400,14 +400,14 @@ def finalDF(vals, tags, notags):
     #         dont_use.append(title)
     # print(len(dont_use))
     # print(dont_use)
-    summies =  summies.head(tags)
+    summies =  summies.head(tagnum)
     best = summies.index
     print("best"*20)
     print(best)
     print('all'*20)
-    print(tags.columns)
+    print(just_tags.columns)
 
-    diff = list(set(tags.columns) - set(best))
+    diff = list(set(just_tags.columns) - set(best))
     print('diff'*20)
     print(diff)
     
