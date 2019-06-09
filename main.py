@@ -434,7 +434,7 @@ def finalDF(vals, notags):
 
 
 def relu_advanced(x):
-    return K.relu(x, max_value=5, alpha=0)
+    return K.relu(x, max_value=5, alpha=0.01)
 
 
 
