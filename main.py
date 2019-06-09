@@ -112,8 +112,6 @@ def get_accuracy(prediction, target):
     print(num_correct / total)
 
 
-
-
 # @cli.command()
 def get_json_recipes():
     print("parsing out the recipes...")
@@ -142,72 +140,34 @@ def removeNums(x):
     # print x
     # quit()
 
-
 @cli.command()
-def vectorize():
-    # removeNums(['1 1/2 fucks', '2.5 fucks', '1/3 dead', '4 cahoots'])
-    # quit()
-    json_recipes = get_json_recipes()
-    recipes = pd.DataFrame.from_dict(json_recipes, orient='columns')
-    # recipes['ingredients'] = recipes['ingredients'].str.replace('\d+', '')
-    recipes = recipes.dropna(subset=['rating', 'ingredients'])
-    recipes['ingredients'] = recipes['ingredients'].apply(removeNums)
-    #NOW CHANGE FROM VEC OF STRINGS TO ONE FAT STRING
-    ingredient_string = recipes['ingredients'].apply(lambda x : " ".join(str(word) for word in x))
-
-    print('='*80)
-    # get most common bigrams
-    # Now this also takes out stop words
-    sw = stopwords.words('english')
-    sw.append('andor')
-
-    v = CountVectorizer(ngram_range=(1, 2), stop_words = sw)
-    bigrams = v.fit_transform(ingredient_string)
-    vocab = v.vocabulary_
-    count_values = bigrams.toarray().sum(axis=0)
-    print('='*80)
-    # Make list of 5000 most common words and bigrams
-    i = 0
-    most_common_words = []
-    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:100]:
-        print (bg_count, bg_text)
-        most_common_words.append(bg_text)
-    print('\nVector of most common words and bigrams is this long: ')
-    print(len(most_common_words))
-
-    # Makes a feature vector for each list of ingredients
-    ingred_to_rating = pd.concat((recipes['ingredients'], recipes['rating']), axis=1, keys=['ingredients', 'rating'])
-
-    feature_vectors = []
-    for i, row in ingred_to_rating.iterrows():
-        feature_vec = []
-        ingred = str(row['ingredients'])
-        for word in most_common_words:
-            if word in ingred:
-                feature_vec.append(1)
-            else:
-                feature_vec.append(0)
-        feature_vectors.append(feature_vec)
+def svr():
+    recipes = pd.read_pickle('final_dataframe.pkl')
+    print("CURRENT DIMENSIONS WE ARE WORKING WITH: " + str(recipes.shape))
+    #######################
 
 
-    print(len(feature_vectors))
-    print(recipes.shape)
-    
-    recipes['feature'] = feature_vectors
-    '''
-    x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.rating, test_size=0.2, random_state=42)
-    svra = SVR(gamma='scale', C=1.0, epsilon=0.2, verbose = 3)
-    parameters = {'kernel':('linear', 'rbf'), 'C':[.001, .1, 1, 10], 'gamma':[.001, .1, 1, 10, 'scale']}
-    print('grid search')
-    clf = GridSearchCV(svra, parameters, cv=5, verbose = 5, n_jobs = -1)
+    recipes.target = recipes['rating']
+    recipes.data = recipes.drop(['rating'], axis = 1)
+
+    x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.25, random_state=42)
+    svra = SVR(gamma='scale', C=100, kernel = 'rbf', epsilon = 0.1, verbose = 100)
     print('fitting SVR')
-    clf.fit(list(x_train1), y_train1)
-    y_pred = svra.predict(list(x_test1))
+    svra.fit(x_train, y_train)
+    y_pred = svra.predict(x_test)
     print('svm score:')
-    get_accuracy(y_pred, y_test1)
-    print ("MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(y_test1, y_pred)))
-    print ("MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(y_test1, y_pred))))
+    print(svra.score(x_test, y_test))
+    get_accuracy(y_pred, y_test)
+    print ("MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(y_test, y_pred)))
+    print ("MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(y_test, y_pred))))
+
     '''
+    # GRID SEARCH
+    parameters = {'kernel':('linear', 'rbf'), 'C':[.001, .1, 1, 10], 'gamma':[.001, .1, 1, 10, 'scale'], 'epsilon' = [0.001, 0.01, 0.1, 1, 10]}print('grid search')
+    clf = GridSearchCV(svra, parameters, cv=5, verbose = 5, n_jobs = -1)
+    print(clf.best_params_) 
+    '''
+
     '''
     x_train1, x_test1, y_train1, y_test1 = train_test_split(recipes.feature, recipes.target, test_size=0.2, random_state=42)
     clf = svm.LinearSVC(class_weight = 'balanced', verbose = 1, max_iter = 200000)
@@ -329,13 +289,13 @@ def LinearRegression():
     # Run logistic regression, print results
     lin = LinearRegression()
     lin.fit(x_train, y_train)
-    print('multiple logistic regression:')
+    print('Linear Regression:')
     predictions = lin.predict(x_test)
     print('Score:')
     print(lin.score(x_test, y_test),'\n')
-    print('Confusion Matrix')
+    print('Confusion Matrix:')
     print(metrics.confusion_matrix(y_test, predictions))
-    print('linear coef: ' + str(lin.coef_))
+    print('Coefficients: ' + str(lin.coef_))
     print(lin.coef_)
 
 #import Epicurious (tags) dataset
