@@ -399,8 +399,8 @@ def finalDF(vals, notags):
     # Now this also takes out stop words
     sw = stopwords.words('english')
     sw.append('andor')
-    #units_list = ['cup', 'cups', 'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons', 'ounce', 'ounces', 'pound', 'pounds', 'lb', 'lbs']
-    #sw += units_list
+    units_list = ['cup', 'cups', 'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons', 'ounce', 'ounces', 'pound', 'pounds', 'lb', 'lbs']
+    sw += units_list
 
     v = CountVectorizer(ngram_range=(1, 2), stop_words = sw)
     bigrams = v.fit_transform(ingredient_string)
