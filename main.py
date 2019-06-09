@@ -22,7 +22,8 @@ from keras.layers import Dense, Activation
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.ensemble import RandomForestClassifier     
 from sklearn import preprocessing
-
+from keras import losses
+from keras import backend as K
 ########################
 
 
@@ -379,7 +380,7 @@ def demo(feature_column):
 
 @cli.command()
 @click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
-@click.option('--notags', default=True, is_flag=True, help='whether to zip up with the tags')
+@click.option('--notags', default=False, is_flag=True, help='whether to zip up with the tags')
 def finalDF(vals, notags):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
@@ -450,6 +451,10 @@ def finalDF(vals, notags):
     final.to_pickle('final_dataframe.pkl')
 
 
+def relu_advanced(x):
+    return K.relu(x, max_value=5, alpha=0)
+
+
 
 @cli.command()
 @click.option('--epoch', default=100)
@@ -472,23 +477,49 @@ def neuralnetfiltered(epoch):
     model = Sequential()
     model.add(Dense(100, input_dim=len(recipes.columns) - 1, activation= "relu"))
     model.add(Dense(50, activation= "relu"))
-    model.add(Dense(1))
+    model.add(Dense(1, activation=relu_advanced))
     model.summary() #Print model Summary
 
     # Compile model
     model.compile(loss= "mean_squared_error" , optimizer="adam", metrics=["mean_squared_error"])
     
     # Fit Model
-    model_output = model.fit(x_train, y_train, epochs=epoch, batch_size = 20, verbose=1, validation_data = (x_valid, y_valid))
+
+    history = model.fit(x_train, y_train, epochs=epoch, batch_size = 20, verbose=1, validation_data = (x_valid, y_valid))
     #TODO: look into tthis stuff so we can use it, visualize in here 
     # print("Training accuracy: " , np.mean(model_output.history['acc']))
     # print("Validation accuracy: " , np.mean(model_output.history['val_acc']))
 
+
+    prediction_train_nn= model.predict(x_train)
+    score = np.sqrt(mean_squared_error(prediction_train_nn, y_train))
+    print ("nn TRAIN validation root mean square error", score)
+    score2 = r2_score(y_train,prediction_train_nn)
+    print("nn TRAIN validation r2", score2)
+
     prediction_nn= model.predict(x_valid)
     score = np.sqrt(mean_squared_error(prediction_nn,y_valid))
-    print ("neural network mean square", score)
+    print ("nn validation root mean square error", score)
     score2 = r2_score(y_valid,prediction_nn)
-    print("neural network r2", score2)
+    print("nn validation r2", score2)
+
+
+
+    correct = 0
+    total = 0
+    for index, value in y_valid.iteritems():
+        pred = prediction_nn[total][0]
+        val = value
+        diff = abs(pred - val)
+        if(diff <= .75):
+            correct += 1
+        total += 1
+    print("total: " + str(total) + " length : "+ str(len(y_valid)))
+    print("accuracy: " + str(float(correct)/float(total)))
+
+
+
+
 
     # Plot training & validation loss values
     plt.plot(history.history['loss'])
@@ -496,7 +527,7 @@ def neuralnetfiltered(epoch):
     plt.title('Model loss')
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.legend(['Train', 'Val'], loc='upper left')
     plt.show()
 
 
