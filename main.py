@@ -145,11 +145,10 @@ def get_var():
     recipes = pd.read_pickle('final_dataframe.pkl')
     print("CURRENT DIMENSIONS WE ARE WORKING WITH: " + str(recipes.shape))
     #######################
-
-
     recipes.target = recipes['rating']
     print('variance')
     print(recipes.target.std())
+
 
 @cli.command()
 def svr():
@@ -159,8 +158,6 @@ def svr():
 
 
     recipes.target = recipes['rating']
-    print('variance')
-    print(recipes.target.var)
     recipes.data = recipes.drop(['rating'], axis = 1)
 
     x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.25, random_state=42)
@@ -173,9 +170,6 @@ def svr():
     get_accuracy(y_pred, y_test)
     print ("MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(y_test, y_pred)))
     print ("MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(y_test, y_pred))))
-
-    print('variance')
-    print(recipes.target.var)
 
     '''
     # GRID SEARCH
@@ -480,8 +474,10 @@ def finalDF(vals, tags, notags):
         combined_df = ingr
     else:
         combined_df = pd.concat([recipes, ingr], axis=1)
-        # combined_df = combined_df.drop(['title'], axis = 1)
-        
+        # combined_df = combined_df.drop(['title'], axis = 1)     
+        # Remove zero ratings
+        combined_df = combined_df[combined_df.rating > 1]
+        combined_df = combined_df[combined_df.rating.notnull()]
   
     print("this is the new matrix shape: " + str(combined_df.shape))
     final = combined_df.dropna()
