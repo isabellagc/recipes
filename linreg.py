@@ -132,7 +132,8 @@ features = pd.DataFrame(np.array(vectorize()).reshape(-1,250))'''
 #recipe_tags = recipes.drop(['title','protein','calories','fat','sodium'], axis = 1)
 #recipe_tags = recipes.drop(['title'], axis = 1)
 @cli.command()
-def finalDF():
+@click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
+def finalDF(vals):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
 
@@ -150,6 +151,8 @@ def finalDF():
     # Now this also takes out stop words
     sw = stopwords.words('english')
     sw.append('andor')
+    units_list = ['cup', 'cups', 'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons', 'ounce', 'ounces', 'pound', 'pounds', 'lb', 'lbs']
+    sw += units_list
 
     v = CountVectorizer(ngram_range=(1, 2), stop_words = sw)
     bigrams = v.fit_transform(ingredient_string)
@@ -159,7 +162,7 @@ def finalDF():
     # Make list of 5000 most common words and bigrams
     i = 0
     most_common_words = []
-    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:100]:
+    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:int(vals)]:
         print (bg_count, bg_text)
         most_common_words.append(bg_text)
     print('\nVector of most common words and bigrams is this long: ' + str(len(most_common_words)))
@@ -186,6 +189,10 @@ def finalDF():
     combined_df = combined_df.dropna()
     #TODO: dropping the title until we can embed it
     final = combined_df.drop(['title'], axis = 1)
+
+    combined_df = combined_df[combined_df.rating > 1]
+    combined_df = combined_df[combined_df.rating.notnull()]
+    
     print(final.head())
     print("this is the final matrix shape without null: " + str(final.shape))
     final.to_pickle('final_dataframe_linreg.pkl')
@@ -239,10 +246,12 @@ def linreg():
     print (mean(new_predictions))
 
     print ("MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(new_y_test, new_predictions)))
-    print ("MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(new_y_test, new_predictions))))
+    print ("ROOT MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(new_y_test, new_predictions))))
     print ("R2 : " + str(r2_score(new_y_test, new_predictions)))
     get_accuracy(new_predictions, new_y_test)
     #diffs = pd.DataFrame({'Actual': y_test, 'Predicted': new_predictions})  
+
+
     '''
     lasso = Lasso(max_iter = 1000)
     parameters = {'alpha': [0.1, 1, 10, 100]}
@@ -250,8 +259,7 @@ def linreg():
     grid_search.fit(x_train, y_train)
     print('params')
     print(grid_search.best_params_)
-    '''
-    '''
+
     lasso = Lasso(max_iter = 100000, alpha = 10)
     lasso.fit(x_train, y_train)
     coeff_used = np.sum(lasso.coef_!=0)
