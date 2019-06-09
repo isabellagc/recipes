@@ -353,6 +353,9 @@ def cleanText(text):
 
 
 
+
+
+
 def tokenize_text(text):
     tokens = []
     for sent in nltk.sent_tokenize(text):
@@ -380,11 +383,47 @@ def demo(feature_column):
 
 @cli.command()
 @click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
+@click.option('--tags', default = 100, help='how many of top tags to include')
 @click.option('--notags', default=False, is_flag=True, help='whether to zip up with the tags')
-def finalDF(vals, notags):
+def finalDF(vals, tags, notags):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
 
+
+
+    recipes = recipes.drop(axis=1, columns=['title'])
+    tags = recipes.drop(axis=1, columns=['calories','sodium','fat','protein','rating'])
+    ##GET THE MOST COMMON TAGS DELETE THE ONES THAT ARE SHITE
+    summies = tags.sum(axis = 0, skipna = True) 
+    summies.sort_values(ascending=False, inplace=True)
+
+    
+    # dont_use = []
+    # threshold = 400
+    # total = 0
+    # for title, val in summies.iteritems():
+    #     if val < threshold:
+    #         dont_use.append(title)
+    # print(len(dont_use))
+    # print(dont_use)
+    summies =  summies.head(tags)
+    best = summies.index
+    print("best"*20)
+    print(best)
+    print('all'*20)
+    print(tags.columns)
+
+    diff = list(set(tags.columns) - set(best))
+    print('diff'*20)
+    print(diff)
+    
+
+    recipes = recipes.drop(axis=1, columns=diff)
+    # print(summies)
+    print(recipes)
+    print(recipes.shape)
+    
+   
     #just the ingredient part 
     json_recipes = get_json_recipes()
     ingredients = pd.DataFrame.from_dict(json_recipes, orient='columns')
@@ -399,7 +438,7 @@ def finalDF(vals, notags):
     # Now this also takes out stop words
     sw = stopwords.words('english')
     sw.append('andor')
-    units_list = ['cup', 'cups', 'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons', 'ounce', 'ounces', 'pound', 'pounds', 'lb', 'lbs']
+    units_list = ['cup', 'cups', 'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons', 'ounce', 'ounces', 'pound', 'pounds', 'lb', 'lbs','small', 'large', 'inch' ]
     sw += units_list
 
     v = CountVectorizer(ngram_range=(1, 2), stop_words = sw)
@@ -441,7 +480,7 @@ def finalDF(vals, notags):
         combined_df = ingr
     else:
         combined_df = pd.concat([recipes, ingr], axis=1)
-        combined_df = combined_df.drop(['title'], axis = 1)
+        # combined_df = combined_df.drop(['title'], axis = 1)
         
   
     print("this is the new matrix shape: " + str(combined_df.shape))
@@ -452,7 +491,7 @@ def finalDF(vals, notags):
 
 
 def relu_advanced(x):
-    return K.relu(x, max_value=5, alpha=0.01)
+    return K.relu(x, max_value=5, alpha=0)
 
 
 
@@ -475,7 +514,7 @@ def neuralnetfiltered(epoch):
 
     # Define model
     model = Sequential()
-    model.add(Dense(100, input_dim=len(recipes.columns) - 1, activation= "relu"))
+    model.add(Dense(300, input_dim=len(recipes.columns) - 1, activation= "relu"))
     model.add(Dense(50, activation= "relu"))
     model.add(Dense(1, activation=relu_advanced))
     model.summary() #Print model Summary
