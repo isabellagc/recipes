@@ -12,13 +12,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 import random
 from sklearn.ensemble import RandomForestRegressor
+from keras.wrappers.scikit_learn import KerasRegressor
 
 
 import sys
 #reload(sys)
 #sys.setdefaultencoding('utf-8')
 from keras.models import Sequential
-from keras.layers import Dense, Activation
+from keras.layers import Dense, Activation, Dropout
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.ensemble import RandomForestClassifier     
 from sklearn import preprocessing
@@ -473,88 +474,77 @@ def finalDF(vals, tagnum, notags, quant):
     # Makes a feature vector for each list of ingredients
     feature_vectors = []
 
-    for i, row in tqdm(ingredients.iterrows()):
-        feature_vec = []
-        feature_vec_old = []
-        ingred_list = list(row['full_ingredients'])  
-        # print(ingred_list)
-        ingred_string = ' '.join(ingred_list)
-        # print('this is the string: ')
-        # print(ingred_string)
+    if quant:
+        for i, row in tqdm(ingredients.iterrows()):
+            feature_vec = []
+            feature_vec_old = []
+            ingred_list = list(row['full_ingredients'])  
+            # print(ingred_list)
+            ingred_string = ' '.join(ingred_list)
+            # print('this is the string: ')
+            # print(ingred_string)
 
-        # quit()
-        ingred = ingred_string.split()
-        # print(ingred) 
-        for word in most_common_words:
-            used = False
-            # print('LOOKING FOR : ' + word)
-            if word in ingred_string:
-                feature_vec_old.append(1)
-                # print("entered here with word : " + word) #it is somewhere in this list of ingredients
-                for line in ingred_list: #each instruction
-                    if used:
-                        break
-                    # print('checking the line : ' + line + ' for word ' + word)
-                    if word in line: #if its in this line
-                        # print('found the word in this line : ' + line)
-                        line = line.lower()
-                        no_num = re.sub('[^a-zA-Z ]+', '', line) 
-                        tokens = [token for token in no_num.split(" ") if token != ""]
-                        bigrams = list(ngrams(tokens, 2))
-                        bigrams = [' '.join(x) for x in bigrams]
-                        line_grams = tokens + bigrams
-
-                        # print('going to check fit against all these: ')
-                        # print(line_grams)
-                        for token in line_grams: #each word in that instruction
-                            if used:
-                                break
-                            # print('checking if token ' + token + " is equal to " + word) 
-                            if token == word:
-                                used = True
-                                num = re.search('([0-9]+[,.]?[0-9]*([\/][0-9]+[,.]?[0-9]*)*)', line)
-                                if num:
-                                    try:
-                                        num = float(Fraction(num.group(1)))
-                                    except:
-                                        print('got em... ' + num.group(1) + ' with ingrs : ' + line )
-                                        num = 1
-                                    # print('found a number, ' + str(num) + ' corresponding to : ' + word)
-                                    feature_vec.append(num)
-                                else:
-                                    # print('no number found in this row to associate with : ' + word)
-                                    feature_vec.append(1)
-                if not used:
-                    # print('weird thing where we didnt end up findn...')
-                    # print(word)
-                    feature_vec.append(1)
-
-                            
-                        
-
-            else:
-                feature_vec.append(0)
-                feature_vec_old.append(0)
-
-            if len(feature_vec) != len(feature_vec_old):
-                print("new len: " + str(len(feature_vec)) + " old len " + str(len(feature_vec_old)))
-                print('this happened on this word: ' + word)
-                print(ingred_string)
-                print(ingred_list)
-                quit()
-        # print('the feature vec for this row is now: ' + str(feature_vec))
-
+            # quit()
+            ingred = ingred_string.split()
         
-        # feature_vec_old = []
-        # for word in most_common_words:
-        #     if word in ingred_string:
-        #         # print("OLD entered here with word : " + word)
-        #         feature_vec_old.append(1)
-        #     else:
-        #         feature_vec_old.append(0)
-        # print('this was the old feature  vec: ' + str(feature_vec_old))
-        # # quit()
+            for word in most_common_words:
+                used = False
+                # print('LOOKING FOR : ' + word)
+                if word in ingred_string:
+                    feature_vec_old.append(1)
+                    # print("entered here with word : " + word) #it is somewhere in this list of ingredients
+                    for line in ingred_list: #each instruction
+                        if used:
+                            break
+                        # print('checking the line : ' + line + ' for word ' + word)
+                        if word in line: #if its in this line
+                            # print('found the word in this line : ' + line)
+                            line = line.lower()
+                            no_num = re.sub('[^a-zA-Z ]+', '', line) 
+                            tokens = [token for token in no_num.split(" ") if token != ""]
+                            bigrams = list(ngrams(tokens, 2))
+                            bigrams = [' '.join(x) for x in bigrams]
+                            line_grams = tokens + bigrams
 
+                            # print('going to check fit against all these: ')
+                            # print(line_grams)
+                            for token in line_grams: #each word in that instruction
+                                if used:
+                                    break
+                                # print('checking if token ' + token + " is equal to " + word) 
+                                if token == word:
+                                    used = True
+                                    num = re.search('([0-9]+[,.]?[0-9]*([\/][0-9]+[,.]?[0-9]*)*)', line)
+                                    if num:
+                                        try:
+                                            num = float(Fraction(num.group(1)))
+                                        except:
+                                            print('got em... ' + num.group(1) + ' with ingrs : ' + line )
+                                            num = 1
+                                        # print('found a number, ' + str(num) + ' corresponding to : ' + word)
+                                        feature_vec.append(num)
+                                    else:
+                                        # print('no number found in this row to associate with : ' + word)
+                                        feature_vec.append(1)
+                    if not used:
+                        # print('weird thing where we didnt end up findn...')
+                        # print(word)
+                        feature_vec.append(1)
+
+                                
+                            
+
+                else:
+                    feature_vec.append(0)
+                    feature_vec_old.append(0)
+
+                if len(feature_vec) != len(feature_vec_old):
+                    print("new len: " + str(len(feature_vec)) + " old len " + str(len(feature_vec_old)))
+                    print('this happened on this word: ' + word)
+                    print(ingred_string)
+                    print(ingred_list)
+                    quit()
+            # print('the feature vec for this row is now: ' + str(feature_vec))
 
         if len(feature_vec) != len(most_common_words):
             print("length was actually " + str(len(feature_vec))) 
@@ -571,6 +561,25 @@ def finalDF(vals, tagnum, notags, quant):
             print(ingred_list)
             quit()
         feature_vectors.append(feature_vec)
+    else:
+        for i, row in tqdm(ingredients.iterrows()):
+            feature_vec = []
+            ingred_list = list(row['full_ingredients'])  
+            ingred_string = ' '.join(ingred_list)
+            for word in most_common_words:
+                if word in ingred_string:
+                    # print("OLD entered here with word : " + word)
+                    feature_vec.append(1)
+                else:
+                    feature_vec.append(0)
+    
+            feature_vectors.append(feature_vec)
+
+
+
+
+
+
     print("done with the feature vectors ")
     for vec in feature_vectors:
         print(vec)
@@ -652,7 +661,11 @@ def neuralnetfiltered(epoch,drop):
     # Define model
     model = Sequential()
     model.add(Dense(100, input_dim=len(recipes.columns) - 1, activation= "relu"))
+    # model.add(PReLU())
+    model.add(Dropout(0.2))
     model.add(Dense(50, activation= "relu"))
+    # model.add(PReLU())
+    model.add(Dropout(0.1))
     model.add(Dense(1, activation=relu_advanced))
     model.summary() #Print model Summary
 
@@ -744,6 +757,8 @@ def neuralnetfiltered(epoch,drop):
     print("MEAN accuracy: " + str(float(correct)/float(total)))
 
 
+
+
     # Plot training & validation loss values
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
@@ -753,6 +768,7 @@ def neuralnetfiltered(epoch,drop):
     plt.legend(['Train', 'Val'], loc='upper left')
     plt.show()
     print('='*50)
+
     print('planting the trees:')
     #random forest code
     random.seed(42)
@@ -846,70 +862,6 @@ def neuralnetfiltered(epoch,drop):
     # mean_centered = center_filtered_vals - colmeans_filtered
     # mean_centered['rating'] = center_filtered['rating']
     # mean_centered['rating'] = center_filtered['rating'].values
-
-
-
-
-
-    #import Epicurious (tags) dataset
-    recipes = pd.read_csv('data/epicurious/epi_r.csv').dropna()
-
-
-
-    # Not tags
-    recipe_filtered= recipes.drop(['calories', 'protein', 'fat', 'sodium', 'title'], axis = 1)
-    print(recipe_filtered)
-    recipe_tags = recipe_filtered.drop(['rating'], axis = 1)
-    print('TAGS ' * 20)
-    print(recipe_tags)
-    print('----'*20)
-    print('----'*20)
-    # Create data and target, split into train and test, I think we should sample evenly
-
-    recipe_filtered.target = recipe_filtered['rating']
-    recipe_filtered.data = recipe_filtered.drop(['rating'], axis = 1)
-    # recipe_filtered.data = recipe_filtered['protein']
-
-    print(recipe_filtered.target)
-
-    x_train, x_test, y_train, y_test = train_test_split(recipe_filtered.data, recipe_filtered.target, test_size=0.3, random_state=42)
-    x_train, x_valid, y_train, y_valid = train_test_split(recipe_filtered.data, recipe_filtered.target, test_size=0.3, random_state=42)
-
-
-    # Define model
-    model = Sequential()
-    model.add(Dense(100, input_dim=674, activation= "relu"))
-    model.add(Dense(100, activation= "relu"))
-    model.add(Dense(1))
-    model.summary() #Print model Summary
-
-    # Compile model
-    model.compile(loss= "mean_squared_error" , optimizer="adam", metrics=["mean_squared_error"])
-    
-    # Fit Model
-    # model.fit(x_train, y_train, epochs=10)
-    model_output = model.fit(x_train, y_train, epochs=100, batch_size = 20, verbose=1, validation_data = (x_valid, y_valid))
-    # print("Training accuracy: " , np.mean(model_output.history['acc']))
-    # print("Validation accuracy: " , np.mean(model_output.history['val_acc']))
-
-    pred= model.predict(x_valid)
-    score = np.sqrt(mean_squared_error(pred,y_valid))
-    print ("neural network mean square", score)
-    score2 = r2_score(y_valid,pred)
-    print("neural network r2", score2)
-
-
-
-    #random forest code:
-    random.seed(42)
-    rf = RandomForestRegressor(n_estimators=10)
-    rf.fit(x_train, y_train)
-    print("fit to random forest")
-    y_valid_rf = rf.predict(x_valid)
-    score = np.sqrt(mean_squared_error(y_valid, y_valid_rf))
-    print ("random forest mean square", score)
-    score2 = r2_score(y_valid, y_valid_rf)
-    print("random forest r2", score2)
 
 
 
