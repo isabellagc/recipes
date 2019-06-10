@@ -24,6 +24,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn import preprocessing
 from keras import losses
 from keras import backend as K
+from fractions import Fraction
 ########################
 
 
@@ -33,7 +34,7 @@ import time
 import pandas as pd
 import random
 from tqdm import tqdm
-
+from nltk.util import ngrams
 #-----brought in from example project might delete later
 from mpl_toolkits.mplot3d import Axes3D
 from sklearn.preprocessing import StandardScaler
@@ -123,22 +124,6 @@ def get_json_recipes():
         print('=' * 80)
     '''
     return recipe_ingredients_dict
-
-
-def removeNums(x):
-    # sprint x
-    # print(x)
-    # for val in x:
-    #     nums = re.search('([0-9]+[,.]?[0-9]*([\/][0-9]+[,.]?[0-9]*)*)', val)
-    #     if nums:
-    #         print('found a number, ' + str(nums.group(1)) + ' corresponding to : ' + str(val))
-    result = [re.sub('[^a-zA-Z ]+', '', val) for val in x]
-    # print(type(result))
-    # print(str(result))
-    # quit()
-    return result
-    # print x
-    # quit()
 
 @cli.command()
 def get_var():
@@ -375,6 +360,17 @@ def demo(feature_column):
   print(feature_layer(example_batch).numpy())
 
 
+
+def removeNums(x):
+    # for val in x:
+    #     nums = re.search('([0-9]+[,.]?[0-9]*([\/][0-9]+[,.]?[0-9]*)*)', val)
+    #     if nums:
+    #         print('found a number, ' + str(nums.group(1)) + ' corresponding to : ' + str(val))
+    result = [re.sub('[^a-zA-Z ]+', '', val) for val in x]
+    return result
+
+
+
 @cli.command()
 @click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
 @click.option('--tagnum', default = 675, help='how many of top tags to include')
@@ -422,6 +418,7 @@ def finalDF(vals, tagnum, notags):
     json_recipes = get_json_recipes()
     ingredients = pd.DataFrame.from_dict(json_recipes, orient='columns')
     ingredients = ingredients.dropna(subset=['rating', 'ingredients'])
+    ingredients['full_ingredients'] = ingredients['ingredients']
     ingredients['ingredients'] = ingredients['ingredients'].apply(removeNums)
     #NOW CHANGE FROM VEC OF STRINGS TO ONE FAT STRING
     ingredient_string = ingredients['ingredients'].apply(lambda x : " ".join(str(word) for word in x))
@@ -447,21 +444,70 @@ def finalDF(vals, tagnum, notags):
     print("entering most common words, going to pick the top " + str(int(vals)))
     for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:int(vals)]:
         print (bg_count, bg_text)
-        most_common_words.append(bg_text)
+        most_common_words.append(bg_text.strip())
     print('\nVector of most common words and bigrams is this long: ' + str(len(most_common_words)))
-
+    most_common_words = set(most_common_words)
 
     print("now making the feature vector per list: ")
     # Makes a feature vector for each list of ingredients
     feature_vectors = []
     for i, row in tqdm(ingredients.iterrows()):
         feature_vec = []
-        ingred = str(row['ingredients'])
+        ingred_list = list(row['full_ingredients'])  
+        # print(ingred_list)
+        ingred_string = ' '.join(ingred_list)
+        # print('this is the string: ')
+        # print(ingred_string)
+
+        # quit()
+        # ingred = ingred_string.split()
+        # print(ingred) 
         for word in most_common_words:
-            if word in ingred:
-                feature_vec.append(1)
+            # print('LOOKING FOR : ' + word)
+            if word in ingred_string:
+                # print("entered here with word : " + word) #it is somewhere in this list of ingredients
+                for line in ingred_list: #each instruction
+                    # print('checking the line : ' + line + ' for word ' + word)
+                    if word in line: #if its in this line
+                        # print('found the word in this line : ' + line)
+                        line = line.lower()
+                        no_num = re.sub('[^a-zA-Z ]+', '', line) 
+                        tokens = [token for token in no_num.split(" ") if token != ""]
+                        bigrams = list(ngrams(tokens, 2))
+                        bigrams = [' '.join(x) for x in bigrams]
+                        line_grams = tokens + bigrams
+
+                        # print('going to check fit against all these: ')
+                        # print(line_grams)
+                        for token in line_grams: #each word in that instruction
+                            # print('checking if token ' + token + " is equal to " + word) 
+                            if token == word:
+                                num = re.search('([0-9]+[,.]?[0-9]*([\/][0-9]+[,.]?[0-9]*)*)', line)
+                                if num:
+                                    try:
+                                        num = float(Fraction(num.group(1)))
+                                    except:
+                                        print('got em... ' + num + ' with ingrs : ' + line )
+                                        num = 1
+                                    # print('found a number, ' + str(num) + ' corresponding to : ' + word)
+                                    feature_vec.append(num)
+                                else:
+                                    # print('no number found in this row to associate with : ' + word)
+                                    feature_vec.append(1)
             else:
                 feature_vec.append(0)
+        # print('the feature vec for this row is now: ' + str(feature_vec))
+        
+        # feature_vec_old = []
+        # for word in most_common_words:
+        #     if word in ingred_string:
+        #         # print("OLD entered here with word : " + word)
+        #         feature_vec_old.append(1)
+        #     else:
+        #         feature_vec_old.append(0)
+        # print('this was the old feature  vec: ' + str(feature_vec_old))
+        # quit()
+
         feature_vectors.append(feature_vec)
     print("done with the feature vectors ")
 
@@ -478,6 +524,8 @@ def finalDF(vals, tagnum, notags):
         # Remove zero ratings
         combined_df = combined_df[combined_df.rating > 1]
         combined_df = combined_df[combined_df.rating.notnull()]
+
+
   
     print("this is the new matrix shape: " + str(combined_df.shape))
     final = combined_df.dropna()
@@ -489,16 +537,27 @@ def finalDF(vals, tagnum, notags):
 def relu_advanced(x):
     return K.relu(x, max_value=5, alpha=0)
 
+def round(x):
+    x = float(x)
+    return math.trunc(x)
+    # up = math.ceil(x * 8)/8
+    # down = math.floor(x * 8)/8
+    # better = min(abs(up - x), abs(down - x))
 
+    # if better == abs(up - x):
+    #     return up
+    # else:
+    #     return down
 
 @cli.command()
-@click.option('--epoch', default=100)
-def neuralnetfiltered(epoch):
+@click.option('--epoch', default=50)
+@click.option('--drop', is_flag=True, default=False)
+def neuralnetfiltered(epoch,drop):
     recipes = pd.read_pickle('final_dataframe.pkl')
     print("CURRENT DIMENSIONS WE ARE WORKING WITH: " + str(recipes.shape))
     #######################
-
-
+    if(drop):
+        recipes.drop(['calories', 'protein', 'fat', 'sodium'], axis = 1)
     recipes.target = recipes['rating']
     recipes.data = recipes.drop(['rating'], axis = 1)
     # recipe_filtered.data = recipe_filtered['protein']
@@ -510,7 +569,7 @@ def neuralnetfiltered(epoch):
 
     # Define model
     model = Sequential()
-    model.add(Dense(300, input_dim=len(recipes.columns) - 1, activation= "relu"))
+    model.add(Dense(100, input_dim=len(recipes.columns) - 1, activation= "relu"))
     model.add(Dense(50, activation= "relu"))
     model.add(Dense(1, activation=relu_advanced))
     model.summary() #Print model Summary
@@ -526,17 +585,35 @@ def neuralnetfiltered(epoch):
     # print("Validation accuracy: " , np.mean(model_output.history['val_acc']))
 
 
+    # rounding = np.vectorize(round)
     prediction_train_nn= model.predict(x_train)
+    print('PRED VALS')
+    print(prediction_train_nn)
+
     score = np.sqrt(mean_squared_error(prediction_train_nn, y_train))
-    print ("nn TRAIN validation root mean square error", score)
+    print ("nn TRAIN  root mean square error", score)
     score2 = r2_score(y_train,prediction_train_nn)
-    print("nn TRAIN validation r2", score2)
+    print("nn TRAIN  r2", score2)
 
     prediction_nn= model.predict(x_valid)
+    print(prediction_nn)
     score = np.sqrt(mean_squared_error(prediction_nn,y_valid))
     print ("nn validation root mean square error", score)
     score2 = r2_score(y_valid,prediction_nn)
     print("nn validation r2", score2)
+
+
+    print('DUMMY MEAN' *50 )
+    mean_rating = float(recipes['rating'].mean())
+    print(mean_rating)
+    print(type(mean_rating))
+    print(len(y_valid))
+    mean_baseline = np.full(len(y_valid), mean_rating)
+    score = np.sqrt(mean_squared_error(mean_baseline,y_valid))
+    print ("MEAN BASELINE root mean square error", score)
+    score2 = r2_score(y_valid,mean_baseline)
+    print("MEAN BASELINE r2", score2)
+    print('DUMMY MEAN' *50 )
 
 
 
