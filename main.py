@@ -30,7 +30,7 @@ from fractions import Fraction
 
 
 import click
-import torch
+# import torch
 import time
 import pandas as pd
 import random

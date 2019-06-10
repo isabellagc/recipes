@@ -131,7 +131,7 @@ def neural_network(size1 = 100, size2 = 50, dropout1 = .2, dropout2 = .1, loss1 
 
 #make the grid
 
-NN_grid = KerasRegressor(build_fn=neural_network, verbose = 1)
+NN_grid = KerasRegressor(build_fn=neural_network, verbose = 10)
 
 print 'Length of data input: ', y_train.shape[0]
 
