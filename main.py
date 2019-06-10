@@ -398,7 +398,7 @@ def removeNums(x):
 @click.option('--tagnum', default = 675, help='how many of top tags to include')
 @click.option('--notags', default=False, is_flag=True, help='whether to zip up with the tags')
 @click.option('--quant', default=False, is_flag=True, help='whether to augment with quantities')
-def finalDF(vals, tagnum, notags):
+def finalDF(vals, tagnum, notags, quant):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
 
@@ -474,88 +474,77 @@ def finalDF(vals, tagnum, notags):
     # Makes a feature vector for each list of ingredients
     feature_vectors = []
 
-    for i, row in tqdm(ingredients.iterrows()):
-        feature_vec = []
-        feature_vec_old = []
-        ingred_list = list(row['full_ingredients'])  
-        # print(ingred_list)
-        ingred_string = ' '.join(ingred_list)
-        # print('this is the string: ')
-        # print(ingred_string)
+    if quant:
+        for i, row in tqdm(ingredients.iterrows()):
+            feature_vec = []
+            feature_vec_old = []
+            ingred_list = list(row['full_ingredients'])  
+            # print(ingred_list)
+            ingred_string = ' '.join(ingred_list)
+            # print('this is the string: ')
+            # print(ingred_string)
 
-        # quit()
-        ingred = ingred_string.split()
-        # print(ingred) 
-        for word in most_common_words:
-            used = False
-            # print('LOOKING FOR : ' + word)
-            if word in ingred_string:
-                feature_vec_old.append(1)
-                # print("entered here with word : " + word) #it is somewhere in this list of ingredients
-                for line in ingred_list: #each instruction
-                    if used:
-                        break
-                    # print('checking the line : ' + line + ' for word ' + word)
-                    if word in line: #if its in this line
-                        # print('found the word in this line : ' + line)
-                        line = line.lower()
-                        no_num = re.sub('[^a-zA-Z ]+', '', line) 
-                        tokens = [token for token in no_num.split(" ") if token != ""]
-                        bigrams = list(ngrams(tokens, 2))
-                        bigrams = [' '.join(x) for x in bigrams]
-                        line_grams = tokens + bigrams
-
-                        # print('going to check fit against all these: ')
-                        # print(line_grams)
-                        for token in line_grams: #each word in that instruction
-                            if used:
-                                break
-                            # print('checking if token ' + token + " is equal to " + word) 
-                            if token == word:
-                                used = True
-                                num = re.search('([0-9]+[,.]?[0-9]*([\/][0-9]+[,.]?[0-9]*)*)', line)
-                                if num:
-                                    try:
-                                        num = float(Fraction(num.group(1)))
-                                    except:
-                                        print('got em... ' + num.group(1) + ' with ingrs : ' + line )
-                                        num = 1
-                                    # print('found a number, ' + str(num) + ' corresponding to : ' + word)
-                                    feature_vec.append(num)
-                                else:
-                                    # print('no number found in this row to associate with : ' + word)
-                                    feature_vec.append(1)
-                if not used:
-                    # print('weird thing where we didnt end up findn...')
-                    # print(word)
-                    feature_vec.append(1)
-
-                            
-                        
-
-            else:
-                feature_vec.append(0)
-                feature_vec_old.append(0)
-
-            if len(feature_vec) != len(feature_vec_old):
-                print("new len: " + str(len(feature_vec)) + " old len " + str(len(feature_vec_old)))
-                print('this happened on this word: ' + word)
-                print(ingred_string)
-                print(ingred_list)
-                quit()
-        # print('the feature vec for this row is now: ' + str(feature_vec))
-
+            # quit()
+            ingred = ingred_string.split()
         
-        # feature_vec_old = []
-        # for word in most_common_words:
-        #     if word in ingred_string:
-        #         # print("OLD entered here with word : " + word)
-        #         feature_vec_old.append(1)
-        #     else:
-        #         feature_vec_old.append(0)
-        # print('this was the old feature  vec: ' + str(feature_vec_old))
-        # # quit()
+            for word in most_common_words:
+                used = False
+                # print('LOOKING FOR : ' + word)
+                if word in ingred_string:
+                    feature_vec_old.append(1)
+                    # print("entered here with word : " + word) #it is somewhere in this list of ingredients
+                    for line in ingred_list: #each instruction
+                        if used:
+                            break
+                        # print('checking the line : ' + line + ' for word ' + word)
+                        if word in line: #if its in this line
+                            # print('found the word in this line : ' + line)
+                            line = line.lower()
+                            no_num = re.sub('[^a-zA-Z ]+', '', line) 
+                            tokens = [token for token in no_num.split(" ") if token != ""]
+                            bigrams = list(ngrams(tokens, 2))
+                            bigrams = [' '.join(x) for x in bigrams]
+                            line_grams = tokens + bigrams
 
+                            # print('going to check fit against all these: ')
+                            # print(line_grams)
+                            for token in line_grams: #each word in that instruction
+                                if used:
+                                    break
+                                # print('checking if token ' + token + " is equal to " + word) 
+                                if token == word:
+                                    used = True
+                                    num = re.search('([0-9]+[,.]?[0-9]*([\/][0-9]+[,.]?[0-9]*)*)', line)
+                                    if num:
+                                        try:
+                                            num = float(Fraction(num.group(1)))
+                                        except:
+                                            print('got em... ' + num.group(1) + ' with ingrs : ' + line )
+                                            num = 1
+                                        # print('found a number, ' + str(num) + ' corresponding to : ' + word)
+                                        feature_vec.append(num)
+                                    else:
+                                        # print('no number found in this row to associate with : ' + word)
+                                        feature_vec.append(1)
+                    if not used:
+                        # print('weird thing where we didnt end up findn...')
+                        # print(word)
+                        feature_vec.append(1)
+
+                                
+                            
+
+                else:
+                    feature_vec.append(0)
+                    feature_vec_old.append(0)
+
+                if len(feature_vec) != len(feature_vec_old):
+                    print("new len: " + str(len(feature_vec)) + " old len " + str(len(feature_vec_old)))
+                    print('this happened on this word: ' + word)
+                    print(ingred_string)
+                    print(ingred_list)
+                    quit()
+            # print('the feature vec for this row is now: ' + str(feature_vec))
 
         if len(feature_vec) != len(most_common_words):
             print("length was actually " + str(len(feature_vec))) 
@@ -572,6 +561,25 @@ def finalDF(vals, tagnum, notags):
             print(ingred_list)
             quit()
         feature_vectors.append(feature_vec)
+    else:
+        for i, row in tqdm(ingredients.iterrows()):
+            feature_vec = []
+            ingred_list = list(row['full_ingredients'])  
+            ingred_string = ' '.join(ingred_list)
+            for word in most_common_words:
+                if word in ingred_string:
+                    # print("OLD entered here with word : " + word)
+                    feature_vec.append(1)
+                else:
+                    feature_vec.append(0)
+    
+            feature_vectors.append(feature_vec)
+
+
+
+
+
+
     print("done with the feature vectors ")
     for vec in feature_vectors:
         print(vec)
