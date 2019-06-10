@@ -170,10 +170,12 @@ def svr():
     get_accuracy(y_pred, y_test)
     print ("MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(y_test, y_pred)))
     print ("MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(y_test, y_pred))))
+    print(svra.get_params())
 
     '''
     # GRID SEARCH
-    parameters = {'kernel':('linear', 'rbf'), 'C':[.001, .1, 1, 10], 'gamma':[.001, .1, 1, 10, 'scale'], 'epsilon' = [0.001, 0.01, 0.1, 1, 10]}print('grid search')
+    parameters = {'kernel':('linear', 'rbf'), 'C':[.001, .1, 1, 10], 'gamma':[.001, .1, 1, 10, 'scale'], 'epsilon':[0.001, 0.01, 0.1, 1, 10]}
+    print('grid search')
     clf = GridSearchCV(svra, parameters, cv=5, verbose = 5, n_jobs = -1)
     print(clf.best_params_) 
     '''
@@ -187,7 +189,7 @@ def svr():
     y_pred = clf.predict(list(x_test1))
     print(metrics.confusion_matrix(y_test1,y_pred))  
     print(metrics.classification_report(y_test1,y_pred))  
-
+    
     clf = LogisticRegression(class_weight = 'balanced')
     print('LOGIT fitting')
     clf.fit(list(x_train1), y_train1)
@@ -205,6 +207,26 @@ def svr():
     grid_search.best_params_
     print(grid_search.best_params_)
     '''
+
+@cli.command()
+def svr_grid_search():
+    recipes = pd.read_pickle('final_dataframe.pkl')
+    print("CURRENT DIMENSIONS WE ARE WORKING WITH: " + str(recipes.shape))
+    #######################
+
+    recipes.target = recipes['rating']
+    recipes.data = recipes.drop(['rating'], axis = 1)
+
+    x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.25, random_state=42)
+    svr_a = SVR()
+    params = [{'kernel': ['rbf'], 'gamma': [1e-4, 1, 'scale'], 'C': [.1, 1, 10, 1000], 'epsilon':[0.001, 0.1, 10]},
+              {'kernel': ['linear'], 'C': [.1, 1, 10, 1000], 'epsilon':[0.001, 0.1, 10]}]
+    print('Grid Search')
+    grid_search = GridSearchCV(svr_a, params, scoring = 'neg_mean_squared_error', n_jobs=-1, iid=True, cv=3, verbose=100)
+    grid_search.fit(x_train, y_train)
+    print(grid_search.best_params_) 
+
+
 
 
 @cli.command()
