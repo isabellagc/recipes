@@ -4,3 +4,15 @@ gensim
 tqdm
 torch
 numpy
+tensorflow
+nltk
+json
+re
+sklearn
+keras
+fractions
+matplotlib
+os
+bs4
+gensim
+collections

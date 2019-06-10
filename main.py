@@ -70,8 +70,7 @@ from nltk.tokenize import word_tokenize
 from collections import Counter
 from sklearn.feature_extraction.text import CountVectorizer
 
-from sklearn.svm import SVR
-from sklearn import svm
+from sklearn.svm import SVC, SVR
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score
 from sklearn import metrics
@@ -106,7 +105,7 @@ def get_accuracy(prediction, target):
     p = prediction
     t = target
     difference = p - t
-    correct = np.where(abs(difference) <= 0.75, 1, 0)
+    correct = np.where(abs(difference) <= 0.5, 1, 0)
     print(correct)
     num_correct = correct.sum()
     total = len(correct)
@@ -135,6 +134,11 @@ def get_var():
     print('variance')
     print(recipes.target.std())
 
+@cli.command()
+def plot_svr():
+    data = pd.read_csv('pred.csv') 
+    plt.plot(data.Result, data.Pred, 'bo')
+    plt.show()
 
 @cli.command()
 def svr():
@@ -143,11 +147,12 @@ def svr():
     #######################
 
 
-    recipes.target = recipes['rating']
-    recipes.data = recipes.drop(['rating'], axis = 1)
+    recipes.target = recipes['abin']
+    recipes.data = recipes.drop(['rating', 'abin'], axis = 1)
 
     x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.25, random_state=42)
-    svra = SVR(gamma='scale', C=100, kernel = 'rbf', epsilon = 0.1, verbose = 100)
+    '''
+    svra = SVR(gamma=.001, C=1000, kernel = 'rbf', epsilon = 0.001, verbose = 100)
     print('fitting SVR')
     svra.fit(x_train, y_train)
     y_pred = svra.predict(x_test)
@@ -157,6 +162,16 @@ def svr():
     print ("MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(y_test, y_pred)))
     print ("MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(y_test, y_pred))))
     print(svra.get_params())
+    d = {'Pred':y_pred, 'Result':y_test}
+    df = pd.DataFrame(d)
+    df.to_csv('svr_pred.csv')
+    '''
+    svca = SVC()
+    svca.fit(x_train, y_train)
+    y_pred = svca.predict(x_test)
+    print(metrics.confusion_matrix(y_test, y_pred))  
+    print(metrics.classification_report(y_test, y_pred))
+
 
     '''
     # GRID SEARCH
@@ -199,20 +214,16 @@ def svr_grid_search():
     recipes = pd.read_pickle('final_dataframe.pkl')
     print("CURRENT DIMENSIONS WE ARE WORKING WITH: " + str(recipes.shape))
     #######################
-
     recipes.target = recipes['rating']
     recipes.data = recipes.drop(['rating'], axis = 1)
 
     x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.25, random_state=42)
     svr_a = SVR()
-    params = [{'kernel': ['rbf'], 'gamma': [1e-4, 1, 'scale'], 'C': [.1, 1, 10, 1000], 'epsilon':[0.001, 0.1, 10]},
-              {'kernel': ['linear'], 'C': [.1, 1, 10, 1000], 'epsilon':[0.001, 0.1, 10]}]
+    params = {'kernel': ['rbf'], 'gamma': [1e-4, 1, 'scale'], 'C': [1000, 10000], 'epsilon':[0.001, 1, 10]}
     print('Grid Search')
-    grid_search = GridSearchCV(svr_a, params, scoring = 'neg_mean_squared_error', n_jobs=-1, iid=True, cv=3, verbose=100)
+    grid_search = GridSearchCV(svr_a, params, scoring = 'neg_mean_absolute_error', n_jobs=-1, iid=True, cv=3, verbose=10)
     grid_search.fit(x_train, y_train)
     print(grid_search.best_params_) 
-
-
 
 
 @cli.command()
@@ -598,6 +609,10 @@ def finalDF(vals, tagnum, notags, quant):
         # Remove zero ratings
         combined_df = combined_df[combined_df.rating > 1]
         combined_df = combined_df[combined_df.rating.notnull()]
+    print(combined_df['rating'].value_counts())
+    print(len(combined_df['rating'].value_counts()))
+
+    #combined_df['abin'] = pd.cut(x=combined_df['rating'], bins=7)
 
 
   
@@ -606,6 +621,24 @@ def finalDF(vals, tagnum, notags, quant):
     print(final.head())
     print("this is the final matrix shape without null: " + str(final.shape))
     final.to_pickle('final_dataframe.pkl')
+
+@cli.command()
+def rf_grid_search():
+    recipes = pd.read_pickle('final_dataframe.pkl')
+    print("CURRENT DIMENSIONS WE ARE WORKING WITH: " + str(recipes.shape))
+    #######################
+    recipes.target = recipes['rating']
+    recipes.data = recipes.drop(['rating'], axis = 1)
+    x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.2, random_state=42)
+
+
+    random.seed(42)
+    rf = RandomForestRegressor()
+    params = {'n_estimators':[100, 200, 1000], 'max_features':['auto', 'sqrt'], 'max_depth':[10, 100, 1000, None]}
+    print('Grid Search')
+    grid_search = GridSearchCV(rf, params, scoring = 'neg_mean_squared_error', n_jobs=-1, iid=True, cv=3, verbose=100)
+    grid_search.fit(x_train, y_train)
+    print(grid_search.best_params_) 
 
 
 def relu_advanced(x):
@@ -751,14 +784,11 @@ def neuralnetfiltered(epoch,drop):
     plt.legend(['Train', 'Val'], loc='upper left')
     plt.show()
     print('='*50)
-    print('starting the forest:')
 
-
-
-
+    print('planting the trees:')
     #random forest code
     random.seed(42)
-    rf = RandomForestRegressor(n_estimators=10)
+    rf = RandomForestRegressor(n_estimators=100, n_jobs=-1,verbose = 5, max_features='sqrt')
     rf.fit(x_train, y_train)
     print("fit to random forest")
     y_valid_rf = rf.predict(x_valid)
