@@ -105,7 +105,7 @@ def get_accuracy(prediction, target):
     p = prediction
     t = target
     difference = p - t
-    correct = np.where(abs(difference) <= 0.75, 1, 0)
+    correct = np.where(abs(difference) <= 0.5, 1, 0)
     print(correct)
     num_correct = correct.sum()
     total = len(correct)
@@ -146,7 +146,7 @@ def svr():
     recipes.data = recipes.drop(['rating'], axis = 1)
 
     x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.25, random_state=42)
-    svra = SVR(gamma='scale', C=100, kernel = 'rbf', epsilon = 0.1, verbose = 100)
+    svra = SVR(gamma=.001, C=1000, kernel = 'rbf', epsilon = 0.001, verbose = 100)
     print('fitting SVR')
     svra.fit(x_train, y_train)
     y_pred = svra.predict(x_test)
@@ -156,6 +156,9 @@ def svr():
     print ("MEAN ABSOLUTE ERROR : " + str(mean_absolute_error(y_test, y_pred)))
     print ("MEAN SQUARED ERROR : " + str(np.sqrt(mean_squared_error(y_test, y_pred))))
     print(svra.get_params())
+    d = {'Pred':y_pred, 'Result':y_test}
+    df = pd.DataFrame(d)
+    df.to_csv('pred.csv')
 
     '''
     # GRID SEARCH
@@ -198,20 +201,16 @@ def svr_grid_search():
     recipes = pd.read_pickle('final_dataframe.pkl')
     print("CURRENT DIMENSIONS WE ARE WORKING WITH: " + str(recipes.shape))
     #######################
-
     recipes.target = recipes['rating']
     recipes.data = recipes.drop(['rating'], axis = 1)
 
     x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.25, random_state=42)
     svr_a = SVR()
-    params = [{'kernel': ['rbf'], 'gamma': [1e-4, 1, 'scale'], 'C': [.1, 1, 10, 1000], 'epsilon':[0.001, 0.1, 10]},
-              {'kernel': ['linear'], 'C': [.1, 1, 10, 1000], 'epsilon':[0.001, 0.1, 10]}]
+    params = {'kernel': ['rbf'], 'gamma': [1e-4, 1, 'scale'], 'C': [1000, 10000], 'epsilon':[0.001, 1, 10]}
     print('Grid Search')
-    grid_search = GridSearchCV(svr_a, params, scoring = 'neg_mean_squared_error', n_jobs=-1, iid=True, cv=3, verbose=100)
+    grid_search = GridSearchCV(svr_a, params, scoring = 'neg_mean_absolute_error', n_jobs=-1, iid=True, cv=3, verbose=10)
     grid_search.fit(x_train, y_train)
     print(grid_search.best_params_) 
-
-
 
 
 @cli.command()
@@ -398,7 +397,7 @@ def removeNums(x):
 @click.option('--tagnum', default = 675, help='how many of top tags to include')
 @click.option('--notags', default=False, is_flag=True, help='whether to zip up with the tags')
 @click.option('--quant', default=False, is_flag=True, help='whether to augment with quantities')
-def finalDF(vals, tagnum, notags):
+def finalDF(vals, tagnum, notags, quant):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
 
@@ -598,6 +597,24 @@ def finalDF(vals, tagnum, notags):
     print("this is the final matrix shape without null: " + str(final.shape))
     final.to_pickle('final_dataframe.pkl')
 
+@cli.command()
+def rf_grid_search():
+    recipes = pd.read_pickle('final_dataframe.pkl')
+    print("CURRENT DIMENSIONS WE ARE WORKING WITH: " + str(recipes.shape))
+    #######################
+    recipes.target = recipes['rating']
+    recipes.data = recipes.drop(['rating'], axis = 1)
+    x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.2, random_state=42)
+
+
+    random.seed(42)
+    rf = RandomForestRegressor()
+    params = {'n_estimators':[10, 50, 100], 'max_features':['auto', 'sqrt'], 'max_depth':[10, 100, 1000, None]}
+    print('Grid Search')
+    grid_search = GridSearchCV(rf, params, scoring = 'neg_mean_squared_error', n_jobs=-1, iid=True, cv=3, verbose=100)
+    grid_search.fit(x_train, y_train)
+    print(grid_search.best_params_) 
+
 
 def relu_advanced(x):
     return K.relu(x, max_value=5, alpha=0)
@@ -736,10 +753,10 @@ def neuralnetfiltered(epoch,drop):
     plt.legend(['Train', 'Val'], loc='upper left')
     plt.show()
     print('='*50)
-    print('starting the forest:')
+    print('planting the trees:')
     #random forest code
     random.seed(42)
-    rf = RandomForestRegressor(n_estimators=10)
+    rf = RandomForestRegressor(n_estimators=100, n_jobs=-1,verbose = 5, max_features='sqrt')
     rf.fit(x_train, y_train)
     print("fit to random forest")
     y_valid_rf = rf.predict(x_valid)
