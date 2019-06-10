@@ -12,13 +12,14 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 import random
 from sklearn.ensemble import RandomForestRegressor
+from keras.wrappers.scikit_learn import KerasRegressor
 
 
 import sys
 #reload(sys)
 #sys.setdefaultencoding('utf-8')
 from keras.models import Sequential
-from keras.layers import Dense, Activation
+from keras.layers import Dense, Activation, Dropout
 from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.ensemble import RandomForestClassifier     
 from sklearn import preprocessing
@@ -643,7 +644,11 @@ def neuralnetfiltered(epoch,drop):
     # Define model
     model = Sequential()
     model.add(Dense(100, input_dim=len(recipes.columns) - 1, activation= "relu"))
+    # model.add(PReLU())
+    model.add(Dropout(0.2))
     model.add(Dense(50, activation= "relu"))
+    # model.add(PReLU())
+    model.add(Dropout(0.1))
     model.add(Dense(1, activation=relu_advanced))
     model.summary() #Print model Summary
 
@@ -735,6 +740,8 @@ def neuralnetfiltered(epoch,drop):
     print("MEAN accuracy: " + str(float(correct)/float(total)))
 
 
+
+
     # Plot training & validation loss values
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
@@ -745,6 +752,10 @@ def neuralnetfiltered(epoch,drop):
     plt.show()
     print('='*50)
     print('starting the forest:')
+
+
+
+
     #random forest code
     random.seed(42)
     rf = RandomForestRegressor(n_estimators=10)
@@ -837,70 +848,6 @@ def neuralnetfiltered(epoch,drop):
     # mean_centered = center_filtered_vals - colmeans_filtered
     # mean_centered['rating'] = center_filtered['rating']
     # mean_centered['rating'] = center_filtered['rating'].values
-
-
-
-
-
-    #import Epicurious (tags) dataset
-    recipes = pd.read_csv('data/epicurious/epi_r.csv').dropna()
-
-
-
-    # Not tags
-    recipe_filtered= recipes.drop(['calories', 'protein', 'fat', 'sodium', 'title'], axis = 1)
-    print(recipe_filtered)
-    recipe_tags = recipe_filtered.drop(['rating'], axis = 1)
-    print('TAGS ' * 20)
-    print(recipe_tags)
-    print('----'*20)
-    print('----'*20)
-    # Create data and target, split into train and test, I think we should sample evenly
-
-    recipe_filtered.target = recipe_filtered['rating']
-    recipe_filtered.data = recipe_filtered.drop(['rating'], axis = 1)
-    # recipe_filtered.data = recipe_filtered['protein']
-
-    print(recipe_filtered.target)
-
-    x_train, x_test, y_train, y_test = train_test_split(recipe_filtered.data, recipe_filtered.target, test_size=0.3, random_state=42)
-    x_train, x_valid, y_train, y_valid = train_test_split(recipe_filtered.data, recipe_filtered.target, test_size=0.3, random_state=42)
-
-
-    # Define model
-    model = Sequential()
-    model.add(Dense(100, input_dim=674, activation= "relu"))
-    model.add(Dense(100, activation= "relu"))
-    model.add(Dense(1))
-    model.summary() #Print model Summary
-
-    # Compile model
-    model.compile(loss= "mean_squared_error" , optimizer="adam", metrics=["mean_squared_error"])
-    
-    # Fit Model
-    # model.fit(x_train, y_train, epochs=10)
-    model_output = model.fit(x_train, y_train, epochs=100, batch_size = 20, verbose=1, validation_data = (x_valid, y_valid))
-    # print("Training accuracy: " , np.mean(model_output.history['acc']))
-    # print("Validation accuracy: " , np.mean(model_output.history['val_acc']))
-
-    pred= model.predict(x_valid)
-    score = np.sqrt(mean_squared_error(pred,y_valid))
-    print ("neural network mean square", score)
-    score2 = r2_score(y_valid,pred)
-    print("neural network r2", score2)
-
-
-
-    #random forest code:
-    random.seed(42)
-    rf = RandomForestRegressor(n_estimators=10)
-    rf.fit(x_train, y_train)
-    print("fit to random forest")
-    y_valid_rf = rf.predict(x_valid)
-    score = np.sqrt(mean_squared_error(y_valid, y_valid_rf))
-    print ("random forest mean square", score)
-    score2 = r2_score(y_valid, y_valid_rf)
-    print("random forest r2", score2)
 
 
 
