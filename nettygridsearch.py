@@ -88,10 +88,10 @@ recipes.data = recipes.drop(['rating'], axis = 1)
 X_train, X_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.3, random_state=42)
 X_train, X_val, y_train, y_val = train_test_split(recipes.data, recipes.target, test_size=0.3, random_state=42)
 #TODO: center the shits (calories)
-print X_train.shape
-print X_val.shape
-print y_train.shape
-print y_val.shape
+# print X_train.shape
+# print X_val.shape
+# print y_train.shape
+# print y_val.shape
 
 x_train_array = np.array(X_train, dtype = float)
 y_train_array = np.array(y_train)
@@ -118,7 +118,7 @@ def neural_network(size1 = 100, size2 = 50, dropout1 = .2, dropout2 = .1, loss1 
     # model.add(PReLU())
     model.add(Dropout(dropout1))
 
-    model.add(Dense(size2, activation=activation2, kernel_initializer=init1))
+    model.add(Dense(size2, activation=activation1, kernel_initializer=init1))
     # model.add(PReLU())
     model.add(Dropout(dropout2))
 
@@ -131,22 +131,19 @@ def neural_network(size1 = 100, size2 = 50, dropout1 = .2, dropout2 = .1, loss1 
 
 #make the grid
 
-NN_grid = KerasRegressor(build_fn=neural_network, verbose = 1)
+NN_grid = KerasRegressor(build_fn=neural_network, verbose = 100)
 
-print 'Length of data input: ', y_train.shape[0]
+print('Length of data input: ', y_train.shape[0])
 
-batch_size = [10, 20, 80, 100]
+batch_size = [10, 20, 80]
 epochs = [30, 50, 100]
 size1 = [100, 200, 300]
 size2 = [10, 50, 100]
-opti = ['adam', 'sgd']
-activation1 = ['relu', 'softmax']
-activation2= ['relu', 'softmax']
 # dropout2 = [.1, .2]
 # dropout1 = [.4, .3, .2]
 
-param_grid = dict(batch_size=batch_size, epochs=epochs, size1=size1, size2=size2, opti=opti,activation1=activation1,activation2=activation2)
-validator = GridSearchCV(estimator = NN_grid, param_grid = param_grid, cv = 3, n_jobs = -1, verbose=1)
+param_grid = dict(batch_size=batch_size, epochs=epochs, size1=size1, size2=size2)
+validator = GridSearchCV(estimator = NN_grid, param_grid = param_grid, cv = 3, n_jobs = 3, verbose=100)
          
 
 
