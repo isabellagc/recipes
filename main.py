@@ -70,7 +70,6 @@ from nltk.tokenize import word_tokenize
 from collections import Counter
 from sklearn.feature_extraction.text import CountVectorizer
 
-from sklearn.svm import SVR
 from sklearn import svm
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score
@@ -135,6 +134,11 @@ def get_var():
     print('variance')
     print(recipes.target.std())
 
+@cli.command()
+def plot_svr():
+    data = pd.read_csv('pred.csv') 
+    plt.plot(data.Result, data.Pred, 'bo')
+    plt.show()
 
 @cli.command()
 def svr():
@@ -147,6 +151,7 @@ def svr():
     recipes.data = recipes.drop(['rating'], axis = 1)
 
     x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.25, random_state=42)
+    '''
     svra = SVR(gamma=.001, C=1000, kernel = 'rbf', epsilon = 0.001, verbose = 100)
     print('fitting SVR')
     svra.fit(x_train, y_train)
@@ -159,7 +164,14 @@ def svr():
     print(svra.get_params())
     d = {'Pred':y_pred, 'Result':y_test}
     df = pd.DataFrame(d)
-    df.to_csv('pred.csv')
+    df.to_csv('svr_pred.csv')
+    '''
+    svm.svca = SVC()
+    svm.svca.fit(x_train, y_train)
+    y_pred = clf.predict(x_test)
+    print(metrics.confusion_matrix(y_test, y_pred))  
+    print(metrics.classification_report(y_test, y_pred))
+
 
     '''
     # GRID SEARCH
@@ -597,6 +609,7 @@ def finalDF(vals, tagnum, notags, quant):
         # Remove zero ratings
         combined_df = combined_df[combined_df.rating > 1]
         combined_df = combined_df[combined_df.rating.notnull()]
+    print(combined_df['rating'].value_counts())
 
 
   
