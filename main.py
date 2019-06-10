@@ -70,7 +70,7 @@ from nltk.tokenize import word_tokenize
 from collections import Counter
 from sklearn.feature_extraction.text import CountVectorizer
 
-from sklearn import svm
+from sklearn.svm import SVC, SVR
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import cross_val_score
 from sklearn import metrics
@@ -147,8 +147,8 @@ def svr():
     #######################
 
 
-    recipes.target = recipes['rating']
-    recipes.data = recipes.drop(['rating'], axis = 1)
+    recipes.target = recipes['abin']
+    recipes.data = recipes.drop(['rating', 'abin'], axis = 1)
 
     x_train, x_test, y_train, y_test = train_test_split(recipes.data, recipes.target, test_size=0.25, random_state=42)
     '''
@@ -166,9 +166,9 @@ def svr():
     df = pd.DataFrame(d)
     df.to_csv('svr_pred.csv')
     '''
-    svm.svca = SVC()
-    svm.svca.fit(x_train, y_train)
-    y_pred = clf.predict(x_test)
+    svca = SVC()
+    svca.fit(x_train, y_train)
+    y_pred = svca.predict(x_test)
     print(metrics.confusion_matrix(y_test, y_pred))  
     print(metrics.classification_report(y_test, y_pred))
 
@@ -610,6 +610,9 @@ def finalDF(vals, tagnum, notags, quant):
         combined_df = combined_df[combined_df.rating > 1]
         combined_df = combined_df[combined_df.rating.notnull()]
     print(combined_df['rating'].value_counts())
+    print(len(combined_df['rating'].value_counts()))
+
+    #combined_df['abin'] = pd.cut(x=combined_df['rating'], bins=7)
 
 
   
@@ -631,7 +634,7 @@ def rf_grid_search():
 
     random.seed(42)
     rf = RandomForestRegressor()
-    params = {'n_estimators':[10, 50, 100], 'max_features':['auto', 'sqrt'], 'max_depth':[10, 100, 1000, None]}
+    params = {'n_estimators':[100, 200, 1000], 'max_features':['auto', 'sqrt'], 'max_depth':[10, 100, 1000, None]}
     print('Grid Search')
     grid_search = GridSearchCV(rf, params, scoring = 'neg_mean_squared_error', n_jobs=-1, iid=True, cv=3, verbose=100)
     grid_search.fit(x_train, y_train)
