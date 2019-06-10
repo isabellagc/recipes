@@ -16,6 +16,7 @@ from statistics import mean
 
 # Custom defined
 # from models import *
+from nltk.util import ngrams
 from utils import data_utils, test_utils
 
 # NEW
@@ -129,11 +130,218 @@ features = pd.DataFrame(np.array(vectorize()).reshape(-1,250))'''
 
 # Not tags
 
+@cli.command()
+@click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
+@click.option('--tagnum', default = 675, help='how many of top tags to include')
+@click.option('--notags', default=False, is_flag=True, help='whether to zip up with the tags')
+def finalDF(vals, tagnum, notags):
+     #real df with tags 
+    recipes = pd.read_csv('data/epicurious/epi_r.csv')
+
+
+
+    recipes = recipes.drop(axis=1, columns=['title'])
+    just_tags = recipes.drop(axis=1, columns=['calories','sodium','fat','protein','rating'])
+    ##GET THE MOST COMMON TAGS DELETE THE ONES THAT ARE SHITE
+    summies = just_tags.sum(axis = 0, skipna = True) 
+    summies.sort_values(ascending=False, inplace=True)
+
+    
+    # dont_use = []
+    # threshold = 400
+    # total = 0
+    # for title, val in summies.iteritems():
+    #     if val < threshold:
+    #         dont_use.append(title)
+    # print(len(dont_use))
+    # print(dont_use)
+    summies =  summies.head(tagnum)
+    best = summies.index
+    print("best"*20)
+    print(best)
+    print('all'*20)
+    print(just_tags.columns)
+
+    diff = list(set(just_tags.columns) - set(best))
+    print('diff'*20)
+    print(diff)
+    
+
+    recipes = recipes.drop(axis=1, columns=diff)
+    # print(summies)
+    print(recipes)
+    print(recipes.shape)
+    
+   
+    #just the ingredient part 
+    json_recipes = get_json_recipes()
+    ingredients = pd.DataFrame.from_dict(json_recipes, orient='columns')
+    ingredients = ingredients.dropna(subset=['rating', 'ingredients'])
+    ingredients['full_ingredients'] = ingredients['ingredients']
+    ingredients['ingredients'] = ingredients['ingredients'].apply(removeNums)
+    #NOW CHANGE FROM VEC OF STRINGS TO ONE FAT STRING
+    ingredient_string = ingredients['ingredients'].apply(lambda x : " ".join(str(word) for word in x))
+    
+
+    print('='*80)
+    # get most common bigrams
+    # Now this also takes out stop words
+    sw = stopwords.words('english')
+    sw.append('andor')
+    units_list = ['cup', 'cups', 'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons', 'ounce', 'ounces', 'pound', 'pounds', 'lb', 'lbs','small', 'large', 'inch' ]
+    sw += units_list
+
+    v = CountVectorizer(ngram_range=(1, 2), stop_words = sw)
+    bigrams = v.fit_transform(ingredient_string)
+    vocab = v.vocabulary_
+    count_values = bigrams.toarray().sum(axis=0)
+    print('='*80)
+    # Make list of 5000 most common words and bigrams
+    i = 0
+    most_common_words = []
+
+    print("entering most common words, going to pick the top " + str(int(vals)))
+    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:int(vals)]:
+        print (bg_count, bg_text)
+        most_common_words.append(bg_text.strip())
+    print('\nVector of most common words and bigrams is this long: ' + str(len(most_common_words)))
+    most_common_words_set = set(most_common_words)
+
+    print("now making the feature vector per list: ")
+    # Makes a feature vector for each list of ingredients
+    feature_vectors = []
+
+    for i, row in tqdm(ingredients.iterrows()):
+        feature_vec = []
+        feature_vec_old = []
+        ingred_list = list(row['full_ingredients'])  
+        # print(ingred_list)
+        ingred_string = ' '.join(ingred_list)
+        # print('this is the string: ')
+        # print(ingred_string)
+
+        # quit()
+        ingred = ingred_string.split()
+        # print(ingred) 
+        for word in most_common_words:
+            used = False
+            # print('LOOKING FOR : ' + word)
+            if word in ingred_string:
+                feature_vec_old.append(1)
+                # print("entered here with word : " + word) #it is somewhere in this list of ingredients
+                for line in ingred_list: #each instruction
+                    if used:
+                        break
+                    # print('checking the line : ' + line + ' for word ' + word)
+                    if word in line: #if its in this line
+                        # print('found the word in this line : ' + line)
+                        line = line.lower()
+                        no_num = re.sub('[^a-zA-Z ]+', '', line) 
+                        tokens = [token for token in no_num.split(" ") if token != ""]
+                        bigrams = list(ngrams(tokens, 2))
+                        bigrams = [' '.join(x) for x in bigrams]
+                        line_grams = tokens + bigrams
+
+                        # print('going to check fit against all these: ')
+                        # print(line_grams)
+                        for token in line_grams: #each word in that instruction
+                            if used:
+                                break
+                            # print('checking if token ' + token + " is equal to " + word) 
+                            if token == word:
+                                used = True
+                                num = re.search('([0-9]+[,.]?[0-9]*([\/][0-9]+[,.]?[0-9]*)*)', line)
+                                if num:
+                                    try:
+                                        num = float(Fraction(num.group(1)))
+                                    except:
+                                        print('got em... ' + num.group(1) + ' with ingrs : ' + line )
+                                        num = 1
+                                    # print('found a number, ' + str(num) + ' corresponding to : ' + word)
+                                    feature_vec.append(num)
+                                else:
+                                    # print('no number found in this row to associate with : ' + word)
+                                    feature_vec.append(1)
+                if not used:
+                    # print('weird thing where we didnt end up findn...')
+                    # print(word)
+                    feature_vec.append(1)
+
+                            
+                        
+
+            else:
+                feature_vec.append(0)
+                feature_vec_old.append(0)
+
+            if len(feature_vec) != len(feature_vec_old):
+                print("new len: " + str(len(feature_vec)) + " old len " + str(len(feature_vec_old)))
+                print('this happened on this word: ' + word)
+                print(ingred_string)
+                print(ingred_list)
+                quit()
+        # print('the feature vec for this row is now: ' + str(feature_vec))
+
+        
+        # feature_vec_old = []
+        # for word in most_common_words:
+        #     if word in ingred_string:
+        #         # print("OLD entered here with word : " + word)
+        #         feature_vec_old.append(1)
+        #     else:
+        #         feature_vec_old.append(0)
+        # print('this was the old feature  vec: ' + str(feature_vec_old))
+        # # quit()
+
+
+        if len(feature_vec) != len(most_common_words):
+            print("length was actually " + str(len(feature_vec))) 
+            print(most_common_words)
+            print(feature_vec)
+            feature_vec_old = []
+            for word in most_common_words:
+                if word in ingred_string:
+                    # print("OLD entered here with word : " + word)
+                    feature_vec_old.append(1)
+                else:
+                    feature_vec_old.append(0)
+            print('this was the old feature  vec: ' + str(feature_vec_old))
+            print(ingred_list)
+            quit()
+        feature_vectors.append(feature_vec)
+    print("done with the feature vectors ")
+    for vec in feature_vectors:
+        print(vec)
+
+    ingr =  pd.DataFrame(feature_vectors, columns = most_common_words)
+    print("this is the shape of the ingredient matrix: " + str(ingr.shape))
+    print(ingr.head())
+    
+    if notags:
+        ingr['rating'] = recipes['rating']
+        combined_df = ingr
+    else:
+        combined_df = pd.concat([recipes, ingr], axis=1)
+        # combined_df = combined_df.drop(['title'], axis = 1)     
+        # Remove zero ratings
+        combined_df = combined_df[combined_df.rating > 1]
+        combined_df = combined_df[combined_df.rating.notnull()]
+
+
+  
+    print("this is the new matrix shape: " + str(combined_df.shape))
+    final = combined_df.dropna()
+    print(final.head())
+    print("this is the final matrix shape without null: " + str(final.shape))
+    final.to_pickle('final_dataframe_linreg.pkl')
+
+
+
 #recipe_tags = recipes.drop(['title','protein','calories','fat','sodium'], axis = 1)
 #recipe_tags = recipes.drop(['title'], axis = 1)
 @cli.command()
 @click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
-def finalDF(vals):
+def finalDF_OLD(vals):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
 
@@ -199,7 +407,7 @@ def finalDF(vals):
 
 @cli.command()
 def linreg():
-    recipes = pd.read_pickle('final_dataframe_linreg.pkl')
+    recipes = pd.read_pickle('final_dataframe.pkl')
     
     # Create data and target, split into train and test, I think we should sample evenly
     recipes.target = recipes['rating']

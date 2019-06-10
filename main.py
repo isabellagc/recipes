@@ -375,10 +375,10 @@ def removeNums(x):
 @click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
 @click.option('--tagnum', default = 675, help='how many of top tags to include')
 @click.option('--notags', default=False, is_flag=True, help='whether to zip up with the tags')
+@click.option('--quant', default=False, is_flag=True, help='whether to augment with quantities')
 def finalDF(vals, tagnum, notags):
      #real df with tags 
     recipes = pd.read_csv('data/epicurious/epi_r.csv')
-
 
 
     recipes = recipes.drop(axis=1, columns=['title'])
@@ -446,13 +446,15 @@ def finalDF(vals, tagnum, notags):
         print (bg_count, bg_text)
         most_common_words.append(bg_text.strip())
     print('\nVector of most common words and bigrams is this long: ' + str(len(most_common_words)))
-    most_common_words = set(most_common_words)
+    most_common_words_set = set(most_common_words)
 
     print("now making the feature vector per list: ")
     # Makes a feature vector for each list of ingredients
     feature_vectors = []
+
     for i, row in tqdm(ingredients.iterrows()):
         feature_vec = []
+        feature_vec_old = []
         ingred_list = list(row['full_ingredients'])  
         # print(ingred_list)
         ingred_string = ' '.join(ingred_list)
@@ -460,13 +462,17 @@ def finalDF(vals, tagnum, notags):
         # print(ingred_string)
 
         # quit()
-        # ingred = ingred_string.split()
+        ingred = ingred_string.split()
         # print(ingred) 
         for word in most_common_words:
+            used = False
             # print('LOOKING FOR : ' + word)
             if word in ingred_string:
+                feature_vec_old.append(1)
                 # print("entered here with word : " + word) #it is somewhere in this list of ingredients
                 for line in ingred_list: #each instruction
+                    if used:
+                        break
                     # print('checking the line : ' + line + ' for word ' + word)
                     if word in line: #if its in this line
                         # print('found the word in this line : ' + line)
@@ -480,23 +486,43 @@ def finalDF(vals, tagnum, notags):
                         # print('going to check fit against all these: ')
                         # print(line_grams)
                         for token in line_grams: #each word in that instruction
+                            if used:
+                                break
                             # print('checking if token ' + token + " is equal to " + word) 
                             if token == word:
+                                used = True
                                 num = re.search('([0-9]+[,.]?[0-9]*([\/][0-9]+[,.]?[0-9]*)*)', line)
                                 if num:
                                     try:
                                         num = float(Fraction(num.group(1)))
                                     except:
-                                        print('got em... ' + num + ' with ingrs : ' + line )
+                                        print('got em... ' + num.group(1) + ' with ingrs : ' + line )
                                         num = 1
                                     # print('found a number, ' + str(num) + ' corresponding to : ' + word)
                                     feature_vec.append(num)
                                 else:
                                     # print('no number found in this row to associate with : ' + word)
                                     feature_vec.append(1)
+                if not used:
+                    # print('weird thing where we didnt end up findn...')
+                    # print(word)
+                    feature_vec.append(1)
+
+                            
+                        
+
             else:
                 feature_vec.append(0)
+                feature_vec_old.append(0)
+
+            if len(feature_vec) != len(feature_vec_old):
+                print("new len: " + str(len(feature_vec)) + " old len " + str(len(feature_vec_old)))
+                print('this happened on this word: ' + word)
+                print(ingred_string)
+                print(ingred_list)
+                quit()
         # print('the feature vec for this row is now: ' + str(feature_vec))
+
         
         # feature_vec_old = []
         # for word in most_common_words:
@@ -506,10 +532,27 @@ def finalDF(vals, tagnum, notags):
         #     else:
         #         feature_vec_old.append(0)
         # print('this was the old feature  vec: ' + str(feature_vec_old))
-        # quit()
+        # # quit()
 
+
+        if len(feature_vec) != len(most_common_words):
+            print("length was actually " + str(len(feature_vec))) 
+            print(most_common_words)
+            print(feature_vec)
+            feature_vec_old = []
+            for word in most_common_words:
+                if word in ingred_string:
+                    # print("OLD entered here with word : " + word)
+                    feature_vec_old.append(1)
+                else:
+                    feature_vec_old.append(0)
+            print('this was the old feature  vec: ' + str(feature_vec_old))
+            print(ingred_list)
+            quit()
         feature_vectors.append(feature_vec)
     print("done with the feature vectors ")
+    for vec in feature_vectors:
+        print(vec)
 
     ingr =  pd.DataFrame(feature_vectors, columns = most_common_words)
     print("this is the shape of the ingredient matrix: " + str(ingr.shape))
@@ -584,39 +627,32 @@ def neuralnetfiltered(epoch,drop):
     # print("Training accuracy: " , np.mean(model_output.history['acc']))
     # print("Validation accuracy: " , np.mean(model_output.history['val_acc']))
 
-
     # rounding = np.vectorize(round)
+    print('='*50)
     prediction_train_nn= model.predict(x_train)
-    print('PRED VALS')
-    print(prediction_train_nn)
 
     score = np.sqrt(mean_squared_error(prediction_train_nn, y_train))
     print ("nn TRAIN  root mean square error", score)
     score2 = r2_score(y_train,prediction_train_nn)
     print("nn TRAIN  r2", score2)
+    
+    correct = 0
+    total = 0
+    for index, value in y_train.iteritems():
+        pred = prediction_train_nn[total][0]
+        val = value
+        diff = abs(pred - val)
+        if(diff <= .75):
+            correct += 1
+        total += 1
+    print("TRAIN accuracy: " + str(float(correct)/float(total)))
 
+    print('='*50)
     prediction_nn= model.predict(x_valid)
-    print(prediction_nn)
     score = np.sqrt(mean_squared_error(prediction_nn,y_valid))
     print ("nn validation root mean square error", score)
     score2 = r2_score(y_valid,prediction_nn)
     print("nn validation r2", score2)
-
-
-    print('DUMMY MEAN' *50 )
-    mean_rating = float(recipes['rating'].mean())
-    print(mean_rating)
-    print(type(mean_rating))
-    print(len(y_valid))
-    mean_baseline = np.full(len(y_valid), mean_rating)
-    score = np.sqrt(mean_squared_error(mean_baseline,y_valid))
-    print ("MEAN BASELINE root mean square error", score)
-    score2 = r2_score(y_valid,mean_baseline)
-    print("MEAN BASELINE r2", score2)
-    print('DUMMY MEAN' *50 )
-
-
-
     correct = 0
     total = 0
     for index, value in y_valid.iteritems():
@@ -626,11 +662,47 @@ def neuralnetfiltered(epoch,drop):
         if(diff <= .75):
             correct += 1
         total += 1
-    print("total: " + str(total) + " length : "+ str(len(y_valid)))
-    print("accuracy: " + str(float(correct)/float(total)))
+    print("NEURAL NET VALID accuracy: " + str(float(correct)/float(total)))
+
+    prediction_nn_test= model.predict(x_test)
+    score = np.sqrt(mean_squared_error(prediction_nn_test,y_test))
+    print ("nn TEST root mean square error", score)
+    score2 = r2_score(y_test,prediction_nn_test)
+    print("nn test r2", score2)
+    correct = 0
+    total = 0
+    for index, value in y_test.iteritems():
+        pred = prediction_nn_test[total][0]
+        val = value
+        diff = abs(pred - val)
+        if(diff <= .75):
+            correct += 1
+        total += 1
+    print("NEURAL NET TEST accuracy: " + str(float(correct)/float(total)))
 
 
+    print('='*50)
+    mean_rating = float(recipes['rating'].mean())
+    print(mean_rating)
+    print(type(mean_rating))
+    print(len(y_valid))
+    mean_baseline = np.full(len(y_valid), mean_rating)
+    score = np.sqrt(mean_squared_error(mean_baseline,y_valid))
+    print ("MEAN BASELINE root mean square error", score)
+    score2 = r2_score(y_valid,mean_baseline)
+    print("MEAN BASELINE r2", score2)
 
+    correct = 0
+    total = 0
+    for index, value in y_valid.iteritems():
+        pred = mean_rating
+        val = value
+        diff = abs(pred - val)
+        if(diff <= .75):
+            correct += 1
+        total += 1
+    print("MEAN total: " + str(total) + " length : "+ str(len(y_valid)))
+    print("MEAN accuracy: " + str(float(correct)/float(total)))
 
 
     # Plot training & validation loss values
@@ -641,9 +713,7 @@ def neuralnetfiltered(epoch,drop):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Val'], loc='upper left')
     plt.show()
-
-
-
+    print('='*50)
     print('starting the forest:')
     #random forest code
     random.seed(42)
@@ -655,6 +725,37 @@ def neuralnetfiltered(epoch,drop):
     print ("random forest mean square", score)
     score2 = r2_score(y_valid, y_valid_rf)
     print("random forest r2", score2)
+
+
+    print('ONTEST, RANDOM FOREST')
+    y_test_rf = rf.predict(x_test)
+    score = np.sqrt(mean_squared_error(y_test, y_test_rf))
+    print ("random forest mean square", score)
+    score2 = r2_score(y_test_rf, y_test)
+    print("random forest r2", score2)
+
+    correct = 0
+    total = 0
+    for index, value in y_valid.iteritems():
+        pred = y_test_rf[total]
+        val = value
+        diff = abs(pred - val)
+        if(diff <= .75):
+            correct += 1
+        total += 1
+    print("RANDOM FOREST TEST accuracy: " + str(float(correct)/float(total)))
+    correct = 0
+    total = 0
+    for index, value in y_valid.iteritems():
+        pred = y_valid_rf[total]
+        val = value
+        diff = abs(pred - val)
+        if(diff <= .75):
+            correct += 1
+        total += 1
+    print("RANDOM FOREST VALID accuracy: " + str(float(correct)/float(total)))
+
+
 
     print("AS A REMINDER, THIS RAN ON THE FOLLOWING DIMENSIONS: " + str(recipes.shape))
 
