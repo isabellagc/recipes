@@ -30,51 +30,6 @@ import tensorflow as tf
 from keras import backend as K
 # tf.python.control_flow_ops = tf
 
-# Based on Faron's stacker. Thanks!
-
-# ID = 'id'
-# TARGET = 'loss'
-# NFOLDS = 5
-# SEED = 669
-# NROWS = None
-# DATA_DIR = "../../"
-
-# TRAIN_FILE = "{0}/train.csv".format(DATA_DIR)
-# TEST_FILE = "{0}/test.csv".format(DATA_DIR)
-# SUBMISSION_FILE = "{0}/sample_submission.csv".format(DATA_DIR)
-
-# train = pd.read_csv(TRAIN_FILE, nrows=NROWS)
-# test = pd.read_csv(TEST_FILE, nrows=NROWS)
-
-# train_indices = train[ID]
-# test_indices = test[ID]
-
-# y_train_full = train["loss"]
-# y_train_ravel = train[TARGET].ravel()
-
-# train.drop([ID, TARGET], axis=1, inplace=True)
-# test.drop([ID], axis=1, inplace=True)
-
-# print("{},{}".format(train.shape, test.shape))
-
-
-# ntrain = train.shape[0]
-# ntest = test.shape[0]
-# train_test = pd.concat((train, test)).reset_index(drop=True)
-
-
-# features = train.columns
-
-# cats = [feat for feat in features if 'cat' in feat]
-# for feat in cats:
-# train_test[feat] = pd.factorize(train_test[feat], sort=True)[0]
-
-# train = train_test.iloc[:ntrain, :]
-
-# # Using train_test_split in order to create random split for Keras,
-# # otherwise it'll use last part of data when
-# # validation_split is provided in the model parameters.
-
 # X_train, X_val, y_train, y_val = train_test_split(train, y_train_full, test_size = 0.15)
 recipes = pd.read_pickle('final_dataframe.pkl')
 print("CURRENT DIMENSIONS WE ARE WORKING WITH: " + str(recipes.shape))

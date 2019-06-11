@@ -464,7 +464,7 @@ def finalDF(vals, tagnum, notags, quant):
     sw = stopwords.words('english')
     sw.append('andor')
     units_list = ['cup', 'cups', 'tablespoon', 'tablespoons', 'teaspoon', 'teaspoons', 'ounce', 'ounces', 'pound', 'pounds', 'lb', 'lbs','small', 'large', 'inch' ]
-    sw += units_list
+    # sw += units_list
 
     v = CountVectorizer(ngram_range=(1, 2), stop_words = sw)
     bigrams = v.fit_transform(ingredient_string)
@@ -657,6 +657,15 @@ def round(x):
     #     return down
 
 @cli.command()
+def graphrating():
+    recipes = pd.read_pickle('final_dataframe.pkl')
+    ratings=recipes[['rating']].copy()
+    plt.plot(ratings, axis=1)
+    plt.show()
+
+
+
+@cli.command()
 @click.option('--epoch', default=50)
 @click.option('--drop', is_flag=True, default=False)
 def neuralnetfiltered(epoch,drop):
@@ -676,10 +685,10 @@ def neuralnetfiltered(epoch,drop):
 
     # Define model
     model = Sequential()
-    model.add(Dense(100, input_dim=len(recipes.columns) - 1, activation= "relu"))
+    model.add(Dense(200, input_dim=len(recipes.columns) - 1, activation= 'relu'))
     # model.add(PReLU())
     model.add(Dropout(0.2))
-    model.add(Dense(50, activation= "relu"))
+    model.add(Dense(100, activation= 'relu'))
     # model.add(PReLU())
     model.add(Dropout(0.1))
     model.add(Dense(1, activation=relu_advanced))
@@ -730,7 +739,7 @@ def neuralnetfiltered(epoch,drop):
         if(diff <= .75):
             correct += 1
         total += 1
-    print("NEURAL NET VALID accuracy: " + str(float(correct)/float(total)))
+    print("T VALID accuracy: " + str(float(correct)/float(total)))
 
     prediction_nn_test= model.predict(x_test)
     score = np.sqrt(mean_squared_error(prediction_nn_test,y_test))
@@ -831,56 +840,6 @@ def neuralnetfiltered(epoch,drop):
     print("AS A REMINDER, THIS RAN ON THE FOLLOWING DIMENSIONS: " + str(recipes.shape))
 
 
-    quit()
-     
-
-
-    # #import Epicurious (tags) dataset
-    # se = pd.Series(feature_vectors)
-    # recipes['feature'] = se.values
-    # # mean_rating = recipes['rating'].mean()
-    # # recipes['target'] = np.where(recipes['rating']>=mean_rating, 1, 0)
-    
-    # center = recipes[['calories', 'protein', 'fat', 'sodium']]
-    # print('CENTERED'*50)
-    # print(center)
-    # print('MEANS'*20)
-    # colmeans = center.mean(axis = 0) 
-    # print(colmeans)
-    # print('MEDIANS' * 20)
-    # colmeadians = center.median(axis = 0)
-    # print(colmeadians)
-
-
-    # #take out extraneous vals
-    # center['rating'] = recipes['rating']
-    # center['rating'] = recipes['rating'].values
-    # center_filtered = recipes[ (abs(recipes['calories'] - colmeadians['calories']) < colmeadians['calories']) & (abs(recipes['sodium'] - colmeadians['sodium']) < colmeadians['sodium'])]
-    # center_filtered = center_filtered.drop(['title'], axis = 1)
-    # print(center_filtered)
-
-    # counter = 0
-    # for index, row in center_filtered.iterrows():
-    #     if row['calories'] > 6350.682993:
-    #         print(index, row['calories'])
-    #         counter += 1
-    # print('counter ' * 100)
-    # print(counter)
-
-    # center_filtered_vals = center_filtered[['calories', 'protein', 'fat', 'sodium', 'feature']]
-    # print('MEANS'*20)
-    # colmeans_filtered = center_filtered_vals.mean(axis = 0) 
-    # print(colmeans_filtered)
-    # print('MEDIANS' * 20)
-    # colmeadians_filtered = center_filtered_vals.median(axis = 0)
-    # print(colmeadians_filtered)
-
-    # mean_centered = center_filtered_vals - colmeans_filtered
-    # mean_centered['rating'] = center_filtered['rating']
-    # mean_centered['rating'] = center_filtered['rating'].values
-
-
-
 
 
 # neuralnet implementation riperonies.
@@ -943,96 +902,6 @@ def neuralnet():
     y_valid_rf = rf.predict(x_valid)
     score = np.sqrt(mean_squared_error(y_valid_rf,y_valid))
     print ("random forest", score)
-
-
-
-    #Importing Libraries for data preparation
-
-    # #Read Necessary files
-    # recipes = pd.read_csv('data/epicurious/epi_r.csv').dropna(subset=['rating'])
-    # train, test = train_test_split(recipes, test_size=0.2)
-    # # train, val = train_test_split(train, test_size=0.2)
-    # #Combined both Train and Test Data set to do preprocessing together 
-    # # and set flag for both as well
-    # train['Type'] = 'Train' 
-    # test['Type'] = 'Test'
-    # fullData = pd.concat([train,test],axis=0)
-
-
-    # #Identifying ID, Categorical
-    # flag_col= ['Type']
-    # target_col = ["rating"]
-    # cat_cols= list(recipes.columns)[:]
-    # cat_cols.remove('rating')
-    # cat_cols.remove('title')
-    # num_cols= list(set(list(fullData.columns))-set(cat_cols)-set(target_col)-set(flag_col))
-    # # Combined numerical and Categorical variables
-    # num_cat_cols = num_cols+cat_cols
-    # #Create a new variable for each variable having missing value with VariableName_NA 
-    # # and flag missing value with 1 and other with 0
-    # for var in num_cat_cols:
-    #     if fullData[var].isnull().any()==True:
-    #         fullData[var+'_NA']=fullData[var].isnull()*1
-    # #Impute numerical missing values with mean
-    # fullData[num_cols] = fullData[num_cols].fillna(fullData[num_cols].mean())
-    # #Impute categorical missing values with -9999
-    # fullData[cat_cols] = fullData[cat_cols].fillna(value = -9999)
-
-
-    # #create label encoders for categorical features
-    # for var in cat_cols:
-    #     number = LabelEncoder()
-    #     fullData[var] = number.fit_transform(fullData[var].astype('str'))
-
-    # #normalize independent variables between 0 and 1 oto converge faster
-    # #maybe undo
-    # # features = list(set(list(fullData.columns))-set(target_col))
-    # # fullData[features] = fullData[features]/fullData[features].max()
-
-    # #make validation set 
-    # print(fullData)
-    # train=fullData[fullData['Type']==1]
-    # test=fullData[fullData['Type']==0]
-    # features=list(set(list(fullData.columns))-set(target_col)-set(flag_col))
-    # # print(features)
-    # X = train[features].values
-    # print("THIS IS X: ", X)
-    # y = train[target_col].values
-    # X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.30, random_state=42)
-
-    # print(X_train[0])
-
-
-
-
-
-    #ATTEMPT 1: 
-    # recipes = pd.read_csv('data/epicurious/epi_r.csv').dropna(subset=['rating'])
-    # train, test = train_test_split(recipes, test_size=0.2)
-    # train, val = train_test_split(train, test_size=0.2)
-    # print(len(train), 'train examples')
-    # print(len(val), 'validation examples')
-    # print(len(test), 'test examples')
-
-    # #change to tf.data dataset from panda df
-    # batch_size = 5 # change this to 32 idk what it does though
-    # train_ds = df_to_dataset(train, batch_size=batch_size)
-    # val_ds = df_to_dataset(val, shuffle=False, batch_size=batch_size)
-    # test_ds = df_to_dataset(test, shuffle=False, batch_size=batch_size)
-
-    # # this is how you would iterate through a batch
-    # # for feature_batch, label_batch in train_ds.take(1):
-    # #   print('Every feature:', list(feature_batch.keys()))
-    # #   print('A batch of ages:', feature_batch['age'])
-    # #   print('A batch of targets:', label_batch )
-    # #
-    # # and this is what output would look like:
-    # # Every feature: ['restecg', 'exang', 'ca', 'fbs', 'sex', 'oldpeak', 'chol', 'thalach', 'thal', 'cp', 'slope', 'age', 'trestbps'] 
-    # # A batch of ages: tf.Tensor([60 37 46 57 57], shape=(5,), dtype=int32)
-    # # A batch of targets: tf.Tensor([1 0 0 1 0], shape=(5,), dtype=int32)
-
-    # calories = feature_column.numeric_column("calories")
-    # demo(calories)
 
 
 

@@ -71,64 +71,7 @@ def removeNums(x):
     return result
     # print x
     # quit()
-#@cli.command()
-'''
-def vectorize():
-    json_recipes = get_json_recipes()
-    recipes = pd.DataFrame.from_dict(json_recipes, orient='columns')
-    # recipes['ingredients'] = recipes['ingredients'].str.replace('\d+', '')
-    recipes = recipes.dropna(subset=['rating', 'ingredients'])
 
-    #tags = pd.read_csv('data/epicurious/epi_r.csv').dropna()
-    #merged = pd.merge(recipes, tags, on='title')
-
-    recipes['ingredients'] = recipes['ingredients'].apply(removeNums)
-    #NOW CHANGE FROM VEC OF STRINGS TO ONE FAT STRING
-    ingredient_string = recipes['ingredients'].apply(lambda x : " ".join(str(word) for word in x))
-
-    #print('='*80)
-    # get most common bigrams
-    # Now this also takes out stop words
-    sw = stopwords.words('english')
-    sw.append('andor')
-
-    v = CountVectorizer(ngram_range=(1, 2), stop_words = sw)
-    bigrams = v.fit_transform(ingredient_string)
-    vocab = v.vocabulary_
-    count_values = bigrams.toarray().sum(axis=0)
-    #print('='*80)
-    # Make list of 5000 most common words and bigrams
-    i = 0
-    most_common_words = []
-    for bg_count, bg_text in sorted([(count_values[i],k) for k,i in vocab.items()], reverse=True)[0:250]:
-        #print (bg_count, bg_text)
-        most_common_words.append(bg_text)
-    #print('\nVector of most common words and bigrams is this long: ')
-    #print(len(most_common_words))
-
-    # Makes a feature vector for each list of ingredients
-    ingred_to_rating = pd.concat((recipes['ingredients'], recipes['rating']), axis=1, keys=['ingredients', 'rating'])
-    feature_vectors = []
-    for i, row in ingred_to_rating.iterrows():
-        feature_vec = []
-        ingred = str(row['ingredients'])
-        for word in most_common_words:
-            if word in ingred:
-                feature_vec.append(1)
-            else:
-                feature_vec.append(0)
-        feature_vectors.append(feature_vec)
-    print(len(feature_vectors))
-    return feature_vectors
-
-#import Epicurious (tags) dataset
-#recipes = pd.read_csv('data/epicurious/epi_r.csv').dropna()
-json_recipes = get_json_recipes()
-recipes = pd.DataFrame.from_dict(json_recipes, orient='columns')
-recipe_tags = recipes.dropna(subset=['rating', 'ingredients'])
-features = pd.DataFrame(np.array(vectorize()).reshape(-1,250))'''
-
-# Not tags
 
 @cli.command()
 @click.option('--vals', default=100, help='how many of top words to include') #how manhy of the top 5000 words to take ink
@@ -480,41 +423,6 @@ def linreg():
     print()
     '''
 
-
-
-
-'''
-lower = 0
-upper = 0
-
-
-    	
-
-print "upper " + str(upper)
-print "lower " + str(lower)
-
-
-# print('linear coef: ' + str(lin.coef_))
-print(len(lin.coef_))
-
-cols = y_train.columns
-
-zipped = dict(zip(cols, lin.coef_))
-# print(sorted(zipped.items(), key = lambda kv: kv[1])) 
-
-
-
-# numerics = ['int16', 'int32', 'int64', 'float16', 'float32', 'float64']
-# numys = recipes.select_dtypes(include=numerics)
-# vals = numys.sum()
-# print numys.sum()
-# count = 0
-# for val in vals:
-# 	if val < 40:
-# 		count += 1
-
-# numyframe = numys.to_frame()
-# print numyframe.head()'''
 
 
 if __name__ == "__main__":
